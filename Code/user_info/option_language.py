@@ -1,6 +1,6 @@
 from enum import Enum
 
-class Option_Language(Enum):
+class OptionLanguage(Enum):
     '''
     语言选项枚举类，包含常用语言及其代码。
      每个枚举成员包含一个唯一的 ID、语言名称和语言代码。
@@ -71,7 +71,7 @@ class Option_Language(Enum):
         return obj
 
     @classmethod
-    def from_code(cls, code: str) -> "Option_Language":
+    def from_code(cls, code: str) -> "OptionLanguage":
         '''
          根据语言代码获取对应的枚举成员，如果未找到则返回默认值（中文简体）。
         '''

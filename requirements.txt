@@ -1,0 +1,11 @@
+markdown>=3.8
+tkhtmlview>=0.3
+openai>=1.0
+pyttsx3>=2.9
+python-dotenv>=1.0
+requests>=2.0
+tqdm>=4.0
+pydantic>=2.0
+vosk>=0.3
+PyAudio>=0.2 ; platform_system=="Windows"
+pywin32>=308 ; platform_system=="Windows"
