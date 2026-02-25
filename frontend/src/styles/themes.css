@@ -1,0 +1,73 @@
+﻿:root,
+[data-theme="parchment"] {
+  --bg-app: #eee5d5;
+  --bg-app-gradient: radial-gradient(circle at 6% 4%, rgba(145, 109, 62, 0.14), transparent 36%),
+    radial-gradient(circle at 92% 88%, rgba(145, 109, 62, 0.1), transparent 40%);
+  --bg-surface: #f8f1e2;
+  --bg-surface-elevated: #fff9ed;
+  --bg-soft: #f2e8d3;
+  --border-soft: #d5bf97;
+  --border-strong: #b69460;
+  --text-primary: #2e2416;
+  --text-secondary: #6b5a41;
+  --text-tertiary: #8e7a5b;
+  --accent: #8f5d30;
+  --accent-strong: #6e4017;
+  --accent-soft: rgba(143, 93, 48, 0.16);
+  --chat-system-bg: #efe2c7;
+  --chat-player-bg: #6f4320;
+  --chat-ai-bg: #f3e7cf;
+  --chat-player-fg: #fff8eb;
+  --ring: 0 0 0 3px rgba(143, 93, 48, 0.2);
+}
+
+[data-theme="nightwatch"] {
+  --bg-app: #0a1323;
+  --bg-app-gradient: radial-gradient(circle at 10% 0%, rgba(101, 169, 255, 0.18), transparent 36%),
+    radial-gradient(circle at 86% 92%, rgba(121, 176, 255, 0.12), transparent 40%);
+  --bg-surface: #101c32;
+  --bg-surface-elevated: #162743;
+  --bg-soft: #13223a;
+  --border-soft: #2c466d;
+  --border-strong: #486da4;
+  --text-primary: #e8f0ff;
+  --text-secondary: #9eb2cf;
+  --text-tertiary: #7f95b4;
+  --accent: #72b4ff;
+  --accent-strong: #a7ceff;
+  --accent-soft: rgba(114, 180, 255, 0.2);
+  --chat-system-bg: #1d2f4e;
+  --chat-player-bg: #2f68d7;
+  --chat-ai-bg: #152741;
+  --chat-player-fg: #f4f8ff;
+  --ring: 0 0 0 3px rgba(114, 180, 255, 0.3);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-2: 0 12px 30px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 20px 48px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="neon"] {
+  --bg-app: #0c0817;
+  --bg-app-gradient: radial-gradient(circle at 8% 10%, rgba(97, 68, 184, 0.35), transparent 36%),
+    radial-gradient(circle at 88% 12%, rgba(45, 226, 208, 0.16), transparent 34%),
+    radial-gradient(circle at 78% 90%, rgba(255, 99, 222, 0.15), transparent 36%);
+  --bg-surface: #151026;
+  --bg-surface-elevated: #1c1434;
+  --bg-soft: #21183d;
+  --border-soft: #433669;
+  --border-strong: #7660b4;
+  --text-primary: #f3edff;
+  --text-secondary: #baaed8;
+  --text-tertiary: #9b8ec2;
+  --accent: #33e3d1;
+  --accent-strong: #8bf8ed;
+  --accent-soft: rgba(51, 227, 209, 0.2);
+  --chat-system-bg: #2a1f49;
+  --chat-player-bg: #1bb9dc;
+  --chat-ai-bg: #21183d;
+  --chat-player-fg: #041217;
+  --ring: 0 0 0 3px rgba(51, 227, 209, 0.28);
+  --shadow-1: 0 1px 2px rgba(3, 2, 8, 0.35);
+  --shadow-2: 0 12px 30px rgba(3, 2, 8, 0.45);
+  --shadow-3: 0 20px 48px rgba(3, 2, 8, 0.55);
+}
