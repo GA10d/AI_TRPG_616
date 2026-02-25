@@ -1,4 +1,3 @@
-# model_registry.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,7 +7,7 @@ from typing import Any, Optional, Dict, List, Literal
 import yaml
 
 
-Dependence = Literal["OpenAI"]  # 你目前只有 OpenAI；以后可扩展 "Anthropic"/"Google"/"xAI" 等
+Dependence = Literal["OpenAI"]  # 目前只有 OpenAI；以后可扩展 "Anthropic"/"Google"/"xAI" 等
 
 
 @dataclass(frozen=True)
@@ -219,21 +218,3 @@ class ModelRegistry:
         """
         return self.get_by_code(code).resolve_endpoint(feature=feature)
 
-
-# ---------------------------
-# 用法示例（可删）
-# ---------------------------
-if __name__ == "__main__":
-    reg = ModelRegistry.load("models.yaml")
-
-    # 1) 基础模型
-    base_url, model = reg.resolve("deepseek")
-    print("deepseek base:", base_url, model)
-
-    # 2) deep_think
-    base_url, model = reg.resolve("deepseek", feature="deep_think")
-    print("deepseek deep_think:", base_url, model)
-
-    # 3) ChatGPT mini_version（base_url 为 None，意味着使用 SDK 默认）
-    base_url, model = reg.resolve("chatgpt", feature="mini_version")
-    print("chatgpt mini:", base_url, model)
