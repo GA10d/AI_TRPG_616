@@ -54,6 +54,7 @@ class OpenAIProviderAdapter:
         timeout: Optional[float],
         extra_options: Optional[Dict[str, Any]],
     ) -> LLMResponse:
+        
         client_kwargs: Dict[str, Any] = {"api_key": self._api_key}
         if base_url:
             client_kwargs["base_url"] = base_url
