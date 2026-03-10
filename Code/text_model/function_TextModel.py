@@ -13,10 +13,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, Optional, Protocol, Sequence
+from typing import Any, Dict, Iterable, Iterator, Optional, Protocol, Sequence, TypeVar
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from pydantic import BaseModel
 
 import data.data_Path as data_path
 from tools.function_Preference import PreferenceManager
@@ -25,6 +26,7 @@ from user_info.option_TextModel import ModelConfig, ModelRegistry
 
 Message = Dict[str, str]
 CODE_ROOT = Path(__file__).resolve().parents[1]
+StructuredOutputT = TypeVar("StructuredOutputT", bound=BaseModel)
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,13 @@ class ProviderAdapter(Protocol):
         ...
 
     def stream_generate(self, request: ProviderRequest) -> Iterator[str]:
+        ...
+
+    def parse_structured(
+        self,
+        request: ProviderRequest,
+        output_schema: type[StructuredOutputT],
+    ) -> StructuredOutputT:
         ...
 
 
@@ -69,6 +78,38 @@ class OpenAICompatibleProviderAdapter:
             if delta:
                 yield delta
 
+    def parse_structured(
+        self,
+        request: ProviderRequest,
+        output_schema: type[StructuredOutputT],
+    ) -> StructuredOutputT:
+        if request.model_config.dependence != "OpenAI" or request.base_url:
+            raise NotImplementedError(
+                "Structured outputs are currently implemented only for native "
+                "OpenAI Responses API models."
+            )
+
+        client = self._build_client(request.model_config, request.base_url)
+        payload: Dict[str, Any] = {
+            "model": request.model_name,
+            "input": list(request.messages),
+            "text_format": output_schema,
+        }
+        if request.temperature is not None:
+            payload["temperature"] = request.temperature
+        if request.max_tokens is not None:
+            payload["max_output_tokens"] = request.max_tokens
+        if request.timeout is not None:
+            payload["timeout"] = request.timeout
+        if request.extra_options:
+            payload.update(request.extra_options)
+
+        response = client.responses.parse(**payload)
+        parsed = response.output_parsed
+        if parsed is None:
+            raise ValueError("Structured output parsing returned None")
+        return parsed
+
     def _build_client(self, model_config: ModelConfig, base_url: Optional[str]) -> OpenAI:
         api_key = self._resolve_api_key(model_config)
         client_kwargs: Dict[str, Any] = {"api_key": api_key}
@@ -79,11 +120,13 @@ class OpenAICompatibleProviderAdapter:
 
     @staticmethod
     def _build_payload(request: ProviderRequest) -> Dict[str, Any]:
+        temperature = OpenAICompatibleProviderAdapter._normalize_temperature(request)
         payload: Dict[str, Any] = {
             "model": request.model_name,
             "messages": list(request.messages),
-            "temperature": request.temperature,
         }
+        if temperature is not None:
+            payload["temperature"] = temperature
         if request.max_tokens is not None:
             payload["max_tokens"] = request.max_tokens
         if request.timeout is not None:
@@ -91,6 +134,17 @@ class OpenAICompatibleProviderAdapter:
         if request.extra_options:
             payload.update(request.extra_options)
         return payload
+
+    @staticmethod
+    def _normalize_temperature(request: ProviderRequest) -> Optional[float]:
+        # Some native OpenAI mini/nano variants only accept the default temperature.
+        if (
+            request.model_config.dependence == "OpenAI"
+            and request.base_url is None
+            and "nano" in request.model_name.lower()
+        ):
+            return 1.0
+        return request.temperature
 
     @staticmethod
     def _resolve_api_key(model_config: ModelConfig) -> str:
@@ -326,6 +380,31 @@ def get_mini_reply(
         extra_options=extra_options,
     )
     return _get_adapter(request.model_config).generate(request)
+
+
+def get_structured_reply(
+    *,
+    input: Sequence[Message],
+    output_schema: type[StructuredOutputT],
+    feature: Optional[str] = None,
+    preference_path: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    temperature: float = 0.7,
+    max_tokens: Optional[int] = None,
+    timeout: Optional[float] = None,
+    extra_options: Optional[Dict[str, Any]] = None,
+) -> StructuredOutputT:
+    request = _build_request(
+        input=input,
+        feature=feature,
+        preference_path=preference_path,
+        registry_path=registry_path,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout=timeout,
+        extra_options=extra_options,
+    )
+    return _get_adapter(request.model_config).parse_structured(request, output_schema)
 
 
 def collect_stream_text(chunks: Iterable[str]) -> str:
