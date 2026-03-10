@@ -60,23 +60,23 @@ models:
     dependence: "Google"
     url_requirements: false
     base_url: "https://generativelanguage.googleapis.com"
-    base_model: "gemini-3.1-pro"
+    base_model: "gemini-2.5-pro"
     charge_url: "https://aistudio.google.com/app/billing"
     docs_url: "https://ai.google.dev/docs"
     features:
       mini_version:
         supported: true
-        model: "gemini-3.1-flash"
+        model: "gemini-2.5-flash"
         url: null
       deep_think:
         supported: true
-        model: "gemini-3.1-pro-thinking"
+        model: "gemini-2.5-pro"
         url: null
       json_output:
         supported: true
-        model: "gemini-3.1-pro"
+        model: "gemini-2.5-pro"
         url: null
       tool_calls:
         supported: true
-        model: "gemini-3.1-pro"
+        model: "gemini-2.5-pro"
         url: null
