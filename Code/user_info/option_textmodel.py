@@ -7,7 +7,7 @@ from typing import Any, Optional, Dict, List, Literal
 import yaml
 
 
-Dependence = Literal["OpenAI"]  # 目前只有 OpenAI；以后可扩展 "Anthropic"/"Google"/"xAI" 等
+Dependence = Literal["OpenAI", "Google"]  # Extendable provider tag
 
 
 @dataclass(frozen=True)
@@ -77,8 +77,10 @@ class ModelConfig:
         code = req_str("code")
 
         dependence = d.get("dependence")
-        if dependence not in ("OpenAI",):
-            raise ValueError(f"{ctx}.dependence must be one of ['OpenAI'], got {dependence!r}")
+        if dependence not in ("OpenAI", "Google"):
+            raise ValueError(
+                f"{ctx}.dependence must be one of ['OpenAI', 'Google'], got {dependence!r}"
+            )
 
         url_requirements = req_bool("url_requirements")
 

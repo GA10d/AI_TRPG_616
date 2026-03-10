@@ -72,8 +72,9 @@ class OpenAICompatibleProviderAdapter:
     def _build_client(self, model_config: ModelConfig, base_url: Optional[str]) -> OpenAI:
         api_key = self._resolve_api_key(model_config)
         client_kwargs: Dict[str, Any] = {"api_key": api_key}
-        if base_url:
-            client_kwargs["base_url"] = base_url
+        normalized_base_url = self._normalize_base_url(model_config, base_url)
+        if normalized_base_url:
+            client_kwargs["base_url"] = normalized_base_url
         return OpenAI(**client_kwargs)
 
     @staticmethod
@@ -103,6 +104,9 @@ class OpenAICompatibleProviderAdapter:
 
         if model_config.base_url and "deepseek" in model_config.base_url.lower():
             env_candidates.insert(0, "DEEPSEEK_API_KEY")
+        if model_config.code.lower() == "gemini" or model_config.dependence == "Google":
+            env_candidates.insert(0, "GEMINI_API_KEY")
+            env_candidates.insert(1, "GOOGLE_API_KEY")
         if model_config.dependence == "OpenAI" and not model_config.base_url:
             env_candidates.insert(0, "OPENAI_API_KEY")
 
@@ -115,6 +119,20 @@ class OpenAICompatibleProviderAdapter:
             f"API key not found for model {model_config.code!r}. "
             f"Tried env vars: {env_candidates}"
         )
+
+    @staticmethod
+    def _normalize_base_url(model_config: ModelConfig, base_url: Optional[str]) -> Optional[str]:
+        if not base_url:
+            return base_url
+
+        normalized = base_url.rstrip("/")
+        if model_config.dependence == "Google":
+            suffix = "/v1beta/openai"
+            if not normalized.endswith(suffix):
+                normalized = f"{normalized}{suffix}"
+            return f"{normalized}/"
+
+        return base_url
 
 
 def _resolve_code_path(path_str: str) -> Path:
@@ -131,6 +149,7 @@ def _get_registry(registry_path: str | Path | None = None) -> ModelRegistry:
 def _get_provider_adapters() -> Dict[str, ProviderAdapter]:
     return {
         "OpenAI": OpenAICompatibleProviderAdapter(),
+        "Google": OpenAICompatibleProviderAdapter(),
     }
 
 
