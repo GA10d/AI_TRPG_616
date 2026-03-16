@@ -69,16 +69,14 @@ class OpenAICompatibleTextProvider:
         request: ProviderRequest,
         output_schema: type[StructuredOutputT],
     ) -> StructuredOutputT:
-        if not (
-            request.model_config.dependence == "OpenAI" and request.base_url is None
-        ):
+        if request.model_config.dependence != "OpenAI" or request.base_url:
             raise NotImplementedError(
-                "Structured outputs are currently implemented only for "
-                "native OpenAI Responses API models."
+                "Structured outputs are currently implemented only for native "
+                "OpenAI Responses API models."
             )
 
         client = self._build_client(request.model_config, request.base_url)
-        payload = {
+        payload: Dict[str, Any] = {
             "model": request.model_name,
             "input": list(request.messages),
             "text_format": output_schema,
@@ -87,15 +85,13 @@ class OpenAICompatibleTextProvider:
             payload["temperature"] = request.temperature
         if request.max_tokens is not None:
             payload["max_output_tokens"] = request.max_tokens
+        if request.timeout is not None:
+            payload["timeout"] = request.timeout
         if request.extra_options:
             payload.update(request.extra_options)
 
-        response = client.responses.parse(
-            **payload,
-            timeout=request.timeout,
-        )
+        response = client.responses.parse(**payload)
         parsed = response.output_parsed
-
         if parsed is None:
             raise ValueError("Structured output parsing returned None")
         return parsed
@@ -150,9 +146,6 @@ class OpenAICompatibleTextProvider:
         if model_config.code.lower() == "gemini" or model_config.dependence == "Google":
             env_candidates.insert(0, "GEMINI_API_KEY")
             env_candidates.insert(1, "GOOGLE_API_KEY")
-        if model_config.code.lower() == "doubao" or model_config.dependence == "Volcengine":
-            env_candidates.insert(0, "ARK_API_KEY")
-            env_candidates.insert(1, "VOLCENGINE_API_KEY")
         if model_config.dependence == "OpenAI" and not model_config.base_url:
             env_candidates.insert(0, "OPENAI_API_KEY")
 
@@ -178,7 +171,5 @@ class OpenAICompatibleTextProvider:
                 normalized = f"{normalized}{suffix}"
             return f"{normalized}/"
 
-        if model_config.dependence == "Volcengine":
-            return normalized
-
         return base_url
+

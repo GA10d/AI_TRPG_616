@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-from dataclasses import dataclass
 import json
 import mimetypes
 import os
@@ -16,16 +15,6 @@ import requests
 
 DEFAULT_MODEL = "gemini-3.1-flash-image-preview"
 API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-
-
-@dataclass(frozen=True)
-class GeminiCallDiagnostics:
-    model: str
-    prompt_chars: int
-    reference_count: int
-    attempt_count: int
-    elapsed_seconds: float
-    response_status_code: int | None = None
 
 
 def _log(message: str) -> None:
@@ -152,91 +141,48 @@ def _call_gemini(
     retries: int,
     backoff: float,
     reference_images: list[Any] | None = None,
-    debug: bool = False,
-) -> tuple[dict[str, Any], GeminiCallDiagnostics]:
+) -> dict[str, Any]:
     url = API_URL_TEMPLATE.format(model=model)
     params = {"key": api_key}
     payload = _build_generate_content_payload(prompt, reference_images=reference_images)
 
     last_exc: Exception | None = None
     attempts = max(1, retries)
-    started_at = time.perf_counter()
-    last_status_code: int | None = None
-
-    if debug:
-        _log(
-            f"[gemini-image] model={model} prompt_chars={len(prompt)} "
-            f"reference_count={len(reference_images or [])} retries={attempts} read_timeout={timeout}s"
-        )
 
     for attempt in range(1, attempts + 1):
         try:
-            attempt_started_at = time.perf_counter()
             response = requests.post(url, params=params, json=payload, timeout=(20, timeout))
-            attempt_elapsed = time.perf_counter() - attempt_started_at
-            last_status_code = response.status_code
             if response.status_code >= 400:
                 msg = _format_http_error(response)
                 if attempt < attempts and _should_retry_http(response.status_code):
                     wait_s = backoff * (2 ** (attempt - 1))
-                    _log(
-                        f"[attempt {attempt}/{attempts}] status={response.status_code} "
-                        f"elapsed={attempt_elapsed:.2f}s {msg} -> retry in {wait_s:.1f}s"
-                    )
+                    _log(f"[attempt {attempt}/{attempts}] {msg} -> retry in {wait_s:.1f}s")
                     time.sleep(wait_s)
                     continue
                 raise RuntimeError(msg)
-            total_elapsed = time.perf_counter() - started_at
-            if debug:
-                _log(
-                    f"[attempt {attempt}/{attempts}] status={response.status_code} "
-                    f"elapsed={attempt_elapsed:.2f}s total={total_elapsed:.2f}s success"
-                )
-            return (
-                response.json(),
-                GeminiCallDiagnostics(
-                    model=model,
-                    prompt_chars=len(prompt),
-                    reference_count=len(reference_images or []),
-                    attempt_count=attempt,
-                    elapsed_seconds=total_elapsed,
-                    response_status_code=response.status_code,
-                ),
-            )
+            return response.json()
 
         except requests.exceptions.ConnectTimeout as exc:
             last_exc = exc
-            attempt_elapsed = time.perf_counter() - attempt_started_at
             if attempt < attempts:
                 wait_s = backoff * (2 ** (attempt - 1))
-                _log(
-                    f"[attempt {attempt}/{attempts}] elapsed={attempt_elapsed:.2f}s "
-                    f"ConnectTimeout: {exc} -> retry in {wait_s:.1f}s"
-                )
+                _log(f"[attempt {attempt}/{attempts}] ConnectTimeout: {exc} -> retry in {wait_s:.1f}s")
                 time.sleep(wait_s)
                 continue
 
         except requests.exceptions.ReadTimeout as exc:
             last_exc = exc
-            attempt_elapsed = time.perf_counter() - attempt_started_at
             if attempt < attempts:
                 wait_s = backoff * (2 ** (attempt - 1))
-                _log(
-                    f"[attempt {attempt}/{attempts}] elapsed={attempt_elapsed:.2f}s "
-                    f"ReadTimeout(read={timeout}s): {exc} -> retry in {wait_s:.1f}s"
-                )
+                _log(f"[attempt {attempt}/{attempts}] ReadTimeout(read={timeout}s): {exc} -> retry in {wait_s:.1f}s")
                 time.sleep(wait_s)
                 continue
 
         except requests.exceptions.RequestException as exc:
             last_exc = exc
-            attempt_elapsed = time.perf_counter() - attempt_started_at
             if attempt < attempts:
                 wait_s = backoff * (2 ** (attempt - 1))
-                _log(
-                    f"[attempt {attempt}/{attempts}] elapsed={attempt_elapsed:.2f}s "
-                    f"RequestException: {exc} -> retry in {wait_s:.1f}s"
-                )
+                _log(f"[attempt {attempt}/{attempts}] RequestException: {exc} -> retry in {wait_s:.1f}s")
                 time.sleep(wait_s)
                 continue
 
@@ -245,11 +191,7 @@ def _call_gemini(
     if last_exc is None:
         raise RuntimeError("Gemini call failed for unknown reason.")
 
-    total_elapsed = time.perf_counter() - started_at
-    raise RuntimeError(
-        f"Gemini request failed after {attempts} attempts in {total_elapsed:.2f}s. "
-        f"{_build_error_hint(last_exc)}\nLast error: {last_exc}"
-    )
+    raise RuntimeError(f"Gemini request failed after {attempts} attempts. {_build_error_hint(last_exc)}\nLast error: {last_exc}")
 
 
 def _extract_image(json_data: dict[str, Any]) -> tuple[bytes, str] | None:
@@ -309,7 +251,7 @@ def main() -> None:
     api_key = _pick_api_key(args.api_key)
 
     _log(f"Calling model={args.model}, retries={args.retries}, read_timeout={args.timeout}s")
-    data, diagnostics = _call_gemini(
+    data = _call_gemini(
         prompt=args.prompt,
         model=args.model,
         api_key=api_key,
@@ -317,7 +259,6 @@ def main() -> None:
         retries=args.retries,
         backoff=args.backoff,
         reference_images=args.reference_image,
-        debug=True,
     )
 
     output_path = Path(args.output)
@@ -342,7 +283,6 @@ def main() -> None:
 
     print(f"Saved image to: {output_path}")
     print(f"MIME type: {mime}")
-    print(f"Elapsed: {diagnostics.elapsed_seconds:.2f}s")
 
 
 if __name__ == "__main__":

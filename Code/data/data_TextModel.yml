@@ -80,30 +80,3 @@ models:
         supported: true
         model: "gemini-2.5-pro"
         url: null
-
-  - id: 4
-    name: "Doubao"
-    code: "doubao"
-    dependence: "Volcengine"
-    url_requirements: true
-    base_url: "https://ark.cn-beijing.volces.com/api/v3"
-    base_model: "doubao-1-5-pro-32k-250115"
-    charge_url: "https://console.volcengine.com/ark"
-    docs_url: "https://www.volcengine.com/docs/6492/2165101"
-    features:
-      mini_version:
-        supported: true
-        model: "doubao-1-5-lite-32k-250115"
-        url: "https://ark.cn-beijing.volces.com/api/v3"
-      deep_think:
-        supported: true
-        model: "doubao-1-5-thinking-pro-250415"
-        url: "https://ark.cn-beijing.volces.com/api/v3"
-      json_output:
-        supported: false
-        model: null
-        url: null
-      tool_calls:
-        supported: true
-        model: "doubao-1-5-pro-32k-250115"
-        url: "https://ark.cn-beijing.volces.com/api/v3"

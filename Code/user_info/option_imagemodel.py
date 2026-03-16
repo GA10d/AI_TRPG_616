@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Literal, Optional
 import yaml
 
 
-Dependence = Literal["Google", "OpenAI", "Volcengine"]
+Dependence = Literal["Google", "OpenAI"]
 
 
 @dataclass(frozen=True)
@@ -79,8 +79,8 @@ class T2IModelConfig:
         code = req_str("code")
 
         dependence = d.get("dependence")
-        if dependence not in ("Google", "OpenAI", "Volcengine"):
-            raise ValueError(f"{ctx}.dependence must be one of ['Google', 'OpenAI', 'Volcengine'], got {dependence!r}")
+        if dependence not in ("Google", "OpenAI"):
+            raise ValueError(f"{ctx}.dependence must be one of ['Google', 'OpenAI'], got {dependence!r}")
 
         url_requirements = req_bool("url_requirements")
 
@@ -110,7 +110,7 @@ class T2IModelConfig:
                 feat_dict, ctx=f"{ctx}.features.{feat_name}"
             )
 
-        required_feature_keys = {"text_to_image", "mini_version"}
+        required_feature_keys = {"text_to_image"}
         missing = required_feature_keys - set(features.keys())
         if missing:
             raise ValueError(f"{ctx}.features missing keys: {sorted(missing)}")
