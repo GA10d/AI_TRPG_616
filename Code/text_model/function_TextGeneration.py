@@ -55,6 +55,7 @@ def _get_provider_adapters() -> Dict[str, ProviderAdapter]:
     return {
         "OpenAI": OpenAICompatibleTextProvider(),
         "Google": OpenAICompatibleTextProvider(),
+        "Volcengine": OpenAICompatibleTextProvider(),
     }
 
 
@@ -240,7 +241,7 @@ def get_structured_reply(
     feature: Optional[str] = None,
     preference_path: str | Path | None = None,
     registry_path: str | Path | None = None,
-    temperature: float = 0.7,
+    temperature: float = 0.1,
     max_tokens: Optional[int] = None,
     timeout: Optional[float] = None,
     extra_options: Optional[dict] = None,
@@ -260,4 +261,3 @@ def get_structured_reply(
 
 def collect_stream_text(chunks: Iterable[str]) -> str:
     return "".join(chunks)
-

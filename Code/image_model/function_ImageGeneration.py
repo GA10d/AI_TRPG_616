@@ -27,9 +27,14 @@ from tools.function_Preference import PreferenceManager
 from user_info.option_Imagemodel import ImageModelConfig, ImageModelRegistry
 
 try:
-    from .provider_GeminiImage import _call_gemini, _extract_image
+    from .provider_GeminiImage import GeminiCallDiagnostics, _call_gemini, _extract_image
 except ImportError:
-    from provider_GeminiImage import _call_gemini, _extract_image
+    from provider_GeminiImage import GeminiCallDiagnostics, _call_gemini, _extract_image
+
+try:
+    from .provider_SeedreamImage import _call_seedream, _extract_image as _extract_seedream_image
+except ImportError:
+    from provider_SeedreamImage import _call_seedream, _extract_image as _extract_seedream_image
 
 
 OUTPUT_DIR = ROOT_DIR / "outputs" / "t2i"
@@ -46,6 +51,8 @@ class GeneratedImageResult:
     output_path: Optional[Path] = None
     cached: bool = False
     reference_count: int = 0
+    elapsed_seconds: Optional[float] = None
+    attempt_count: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -73,7 +80,12 @@ def _get_registry(registry_path: str | Path | None = None) -> ImageModelRegistry
 
 
 def _get_prompt_config(prompt_config_path: str | Path | None = None) -> ImagePromptConfig:
-    config_file = _resolve_code_path(data_path.PATH_DATA_IMAGE_PROMPT)
+    prompt_config_relpath = getattr(
+        data_path,
+        "PATH_DATA_IMAGE_PROMPT",
+        "data/data_ImagePrompt/data_ImagePromptConfig.json",
+    )
+    config_file = _resolve_code_path(prompt_config_relpath)
     if prompt_config_path is not None:
         config_file = Path(prompt_config_path)
     if not config_file.exists():
@@ -194,6 +206,8 @@ def _resolve_api_key(model_config: ImageModelConfig, cli_key: Optional[str] = No
 
     if model_config.code.lower() == "gemini" or model_config.dependence == "Google":
         env_candidates.extend(["GEMINI_API_KEY", "GOOGLE_API_KEY"])
+    if model_config.code.lower() == "doubao" or model_config.dependence == "Volcengine":
+        env_candidates.extend(["ARK_API_KEY", "VOLCENGINE_API_KEY"])
 
     for env_name in env_candidates:
         api_key = os.getenv(env_name)
@@ -210,11 +224,65 @@ def _resolve_runtime_model(
     *,
     requested_model: Optional[str],
     model_config: ImageModelConfig,
+    feature: str = "text_to_image",
 ) -> str:
     if requested_model:
         return requested_model.strip()
-    _, model_name = model_config.resolve_endpoint(feature="text_to_image")
+    _, model_name = model_config.resolve_endpoint(feature=feature)
     return model_name
+
+
+def _call_image_provider(
+    *,
+    model_config: ImageModelConfig,
+    model_name: str,
+    prompt: str,
+    api_key: str,
+    timeout: int,
+    retries: int,
+    backoff: float,
+    reference_images: list[Any] | None = None,
+    debug: bool = False,
+) -> tuple[dict[str, Any], float, int]:
+    if model_config.dependence == "Google":
+        data, diagnostics = _call_gemini(
+            prompt=prompt,
+            model=model_name,
+            api_key=api_key,
+            timeout=timeout,
+            retries=retries,
+            backoff=backoff,
+            reference_images=reference_images,
+            debug=debug,
+        )
+        return data, diagnostics.elapsed_seconds, diagnostics.attempt_count
+
+    if model_config.dependence == "Volcengine":
+        base_url = model_config.base_url
+        if not base_url:
+            raise ValueError("Volcengine image model requires base_url")
+        data, diagnostics = _call_seedream(
+            prompt=prompt,
+            model=model_name,
+            api_key=api_key,
+            base_url=base_url,
+            timeout=timeout,
+            retries=retries,
+            backoff=backoff,
+            reference_images=reference_images,
+            debug=debug,
+        )
+        return data, diagnostics.elapsed_seconds, diagnostics.attempt_count
+
+    raise NotImplementedError(f"Unsupported image provider dependence: {model_config.dependence!r}")
+
+
+def _extract_generated_image(model_config: ImageModelConfig, data: dict[str, Any]) -> tuple[bytes, str] | None:
+    if model_config.dependence == "Google":
+        return _extract_image(data)
+    if model_config.dependence == "Volcengine":
+        return _extract_seedream_image(data)
+    return None
 
 
 def _json_response(handler: BaseHTTPRequestHandler, payload: dict[str, Any], status: int = 200) -> None:
@@ -357,6 +425,7 @@ def generate_image(
     scene_id: str = "default",
     characters: Optional[list[dict[str, str]]] = None,
     reference_images: Optional[list[Any]] = None,
+    feature: str = "text_to_image",
     model_code: Optional[str] = None,
     model_name: Optional[str] = None,
     preference_path: str | Path | None = None,
@@ -368,6 +437,7 @@ def generate_image(
     backoff: float = 2.0,
     save_output: bool = True,
     use_cache: bool = True,
+    debug: bool = False,
 ) -> GeneratedImageResult:
     """
     Generate an image using the configured image model.
@@ -395,6 +465,11 @@ def generate_image(
       2. dict with {"path": "..."}
       3. dict with {"data_url": "data:image/png;base64,..."}
       4. dict with {"bytes_base64": "...", "mime_type": "image/png"}
+    - feature:
+      Which configured image-model feature to use.
+      Common values:
+      1. "text_to_image" -> default / higher-quality configured image model
+      2. "mini_version" -> lighter / faster configured image model
     - model_code:
       Optional configured model code from data_ImageModel.yml, such as "gemini".
       If omitted, the function reads image_model.code from user preferences.
@@ -423,6 +498,8 @@ def generate_image(
       Whether to save the generated image into outputs/t2i.
     - use_cache:
       Whether to reuse an existing file with the same computed cache key.
+    - debug:
+      Whether to print detailed timing diagnostics for upstream Gemini calls.
 
     Returns:
     - GeneratedImageResult:
@@ -448,6 +525,7 @@ def generate_image(
     runtime_model = _resolve_runtime_model(
         requested_model=model_name,
         model_config=selected_model_config,
+        feature=feature,
     )
     resolved_api_key = _resolve_api_key(selected_model_config, cli_key=api_key)
 
@@ -461,7 +539,7 @@ def generate_image(
     cache_key = _sha(
         f"{scene_id}|{trigger}|{theme}|{final_prompt}|{runtime_model}|"
         f"{json.dumps(normalized_characters, ensure_ascii=False)}|"
-        f"{_reference_cache_tag(normalized_reference_images)}"
+        f"{_reference_cache_tag(normalized_reference_images)}|{feature}"
     )
 
     existing = None
@@ -483,19 +561,23 @@ def generate_image(
             output_path=existing,
             cached=True,
             reference_count=len(normalized_reference_images),
+            elapsed_seconds=0.0,
+            attempt_count=0,
         )
 
-    data = _call_gemini(
+    data, elapsed_seconds, attempt_count = _call_image_provider(
+        model_config=selected_model_config,
+        model_name=runtime_model,
         prompt=final_prompt,
-        model=runtime_model,
         api_key=resolved_api_key,
         timeout=timeout,
         retries=retries,
         backoff=backoff,
         reference_images=normalized_reference_images,
+        debug=debug,
     )
 
-    extracted = _extract_image(data)
+    extracted = _extract_generated_image(selected_model_config, data)
     if extracted is None:
         raise RuntimeError("No image data returned from model.")
 
@@ -511,6 +593,55 @@ def generate_image(
         output_path=saved_path,
         cached=False,
         reference_count=len(normalized_reference_images),
+        elapsed_seconds=elapsed_seconds,
+        attempt_count=attempt_count,
+    )
+
+
+def generate_mini_image(
+    *,
+    prompt: str,
+    trigger: str = "manual",
+    theme: str = "parchment",
+    scene_id: str = "default",
+    characters: Optional[list[dict[str, str]]] = None,
+    reference_images: Optional[list[Any]] = None,
+    model_code: Optional[str] = None,
+    model_name: Optional[str] = None,
+    preference_path: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    prompt_config_path: str | Path | None = None,
+    api_key: Optional[str] = None,
+    timeout: int = 90,
+    retries: int = 3,
+    backoff: float = 2.0,
+    save_output: bool = True,
+    use_cache: bool = True,
+    debug: bool = False,
+) -> GeneratedImageResult:
+    """
+    Generate an image using the configured lightweight / mini image model.
+    """
+    return generate_image(
+        prompt=prompt,
+        trigger=trigger,
+        theme=theme,
+        scene_id=scene_id,
+        characters=characters,
+        reference_images=reference_images,
+        feature="mini_version",
+        model_code=model_code,
+        model_name=model_name,
+        preference_path=preference_path,
+        registry_path=registry_path,
+        prompt_config_path=prompt_config_path,
+        api_key=api_key,
+        timeout=timeout,
+        retries=retries,
+        backoff=backoff,
+        save_output=save_output,
+        use_cache=use_cache,
+        debug=debug,
     )
 
 
