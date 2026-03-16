@@ -1,3 +1,5 @@
 PATH_DATA_PREFERENCE = "data/data_UserPreference.json"
 PATH_DATA_DEFAULT_PREFERENCE = "data/data_DefaultPreference.json"
 PATH_DATA_LLM = "data/data_TextModel.yml"
+PATH_DATA_IMAGE_MODEL = "data/data_ImageModel.yml"
+PATH_DATA_IMAGE_PROMPT = "data/data_ImagePrompt/data_ImagePromptConfig.json"

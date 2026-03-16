@@ -1,8 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import base64
 import json
+import mimetypes
 import os
 import sys
 import time
@@ -54,22 +55,102 @@ def _should_retry_http(status_code: int) -> bool:
     return status_code in {408, 429, 500, 502, 503, 504}
 
 
-def _call_gemini(prompt: str, model: str, api_key: str, timeout: int, retries: int, backoff: float) -> dict[str, Any]:
-    url = API_URL_TEMPLATE.format(model=model)
-    params = {"key": api_key}
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
+def _guess_mime_from_path(path: Path) -> str:
+    guessed, _ = mimetypes.guess_type(path.name)
+    return guessed or "image/png"
+
+
+def _to_inline_part(image: Any) -> tuple[dict[str, Any], str]:
+    if isinstance(image, (str, Path)):
+        path = Path(image)
+        if not path.exists() or not path.is_file():
+            raise FileNotFoundError(path)
+        mime_type = _guess_mime_from_path(path)
+        raw = path.read_bytes()
+        return (
+            {
+                "inlineData": {
+                    "mimeType": mime_type,
+                    "data": base64.b64encode(raw).decode("ascii"),
+                }
+            },
+            path.name,
+        )
+
+    if isinstance(image, dict):
+        if "path" in image:
+            return _to_inline_part(image["path"])
+
+        if "data_url" in image:
+            data_url = image["data_url"]
+            if not isinstance(data_url, str) or not data_url.startswith("data:") or "," not in data_url:
+                raise ValueError("reference image data_url must be a valid data URL")
+            header, payload = data_url.split(",", 1)
+            mime_type = header[5:].split(";", 1)[0] or "image/png"
+            return (
+                {
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": payload,
+                    }
+                },
+                f"data_url:{mime_type}",
+            )
+
+        if "bytes_base64" in image:
+            payload = image["bytes_base64"]
+            mime_type = image.get("mime_type", "image/png")
+            if not isinstance(payload, str):
+                raise TypeError("reference image bytes_base64 must be str")
+            if not isinstance(mime_type, str) or not mime_type:
+                raise TypeError("reference image mime_type must be non-empty str")
+            return (
+                {
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": payload,
+                    }
+                },
+                f"bytes_base64:{mime_type}:{len(payload)}",
+            )
+
+    raise TypeError(
+        "reference image must be a file path, or a dict with path/data_url/bytes_base64"
+    )
+
+
+def _build_generate_content_payload(prompt: str, reference_images: list[Any] | None = None) -> dict[str, Any]:
+    parts: list[dict[str, Any]] = [{"text": prompt}]
+    for image in reference_images or []:
+        inline_part, _ = _to_inline_part(image)
+        parts.append(inline_part)
+
+    return {
+        "contents": [{"parts": parts}],
         "generationConfig": {
             "responseModalities": ["TEXT", "IMAGE"],
         },
     }
+
+
+def _call_gemini(
+    prompt: str,
+    model: str,
+    api_key: str,
+    timeout: int,
+    retries: int,
+    backoff: float,
+    reference_images: list[Any] | None = None,
+) -> dict[str, Any]:
+    url = API_URL_TEMPLATE.format(model=model)
+    params = {"key": api_key}
+    payload = _build_generate_content_payload(prompt, reference_images=reference_images)
 
     last_exc: Exception | None = None
     attempts = max(1, retries)
 
     for attempt in range(1, attempts + 1):
         try:
-            # timeout=(connect_timeout, read_timeout)
             response = requests.post(url, params=params, json=payload, timeout=(20, timeout))
             if response.status_code >= 400:
                 msg = _format_http_error(response)
@@ -155,6 +236,12 @@ def main() -> None:
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Gemini model name")
     parser.add_argument("--output", default="outputs/gemini_image", help="Output file path (with or without extension)")
     parser.add_argument("--api-key", default=None, help="Gemini API key (fallback: GEMINI_API_KEY / GOOGLE_API_KEY)")
+    parser.add_argument(
+        "--reference-image",
+        action="append",
+        default=[],
+        help="Optional reference image path. Can be provided multiple times.",
+    )
     parser.add_argument("--timeout", type=int, default=90, help="Read timeout seconds")
     parser.add_argument("--retries", type=int, default=3, help="Retry attempts for timeout/retryable HTTP errors")
     parser.add_argument("--backoff", type=float, default=2.0, help="Initial retry backoff seconds (exponential)")
@@ -171,15 +258,14 @@ def main() -> None:
         timeout=args.timeout,
         retries=args.retries,
         backoff=args.backoff,
+        reference_images=args.reference_image,
     )
 
     output_path = Path(args.output)
     image = _extract_image(data)
     if image is None:
         text = _extract_text(data)
-        raise RuntimeError(
-            "Model returned no image data. Response text: " + (text or "<empty>")
-        )
+        raise RuntimeError("Model returned no image data. Response text: " + (text or "<empty>"))
 
     image_bytes, mime = image
 

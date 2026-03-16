@@ -2,5 +2,8 @@
   "language": "zh-CN",
   "text_model": {
     "code": "chatgpt"
+  },
+  "image_model": {
+    "code": "gemini"
   }
 }
