@@ -4,7 +4,7 @@ import json
 import re
 import threading
 import uuid
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Callable, Iterator, Sequence
 
@@ -545,8 +545,33 @@ class MinimalTRPGEngine:
 
         dicer_future = self._executor.submit(self._call_dicer_from_context, dicer_context)
         npc_future = self._executor.submit(self._call_npc_manager_from_context, npc_context)
-        dicer_result = dicer_future.result()
-        npc_result = npc_future.result()
+        future_to_agent = {
+            dicer_future: "dicer",
+            npc_future: "npc_manager",
+        }
+        dicer_result: DicerOutput | None = None
+        npc_result: NPCManagerOutput | None = None
+
+        for completed_future in as_completed(future_to_agent):
+            agent_name = future_to_agent[completed_future]
+            completed_result = completed_future.result()
+            if agent_name == "dicer":
+                dicer_result = completed_result
+            else:
+                npc_result = completed_result
+            yield TurnStreamEvent(
+                event="agent_update",
+                agent_name=agent_name,
+                payload=completed_result.model_dump(mode="python"),
+            )
+
+        if dicer_result is None or npc_result is None:
+            raise RuntimeError("Missing parallel agent result during streamed turn")
+        yield TurnStreamEvent(
+            event="agent_update",
+            agent_name="director_state",
+            payload=director_state_used.model_dump(mode="python"),
+        )
 
         state_after_dicer = apply_delta(state_before, dicer_result.state_delta)
         state_after_npc = apply_delta(state_after_dicer, npc_result.state_delta)
@@ -623,6 +648,11 @@ class MinimalTRPGEngine:
             pending_started = True
         else:
             next_director_result = self._call_director_from_context(next_director_context)
+            yield TurnStreamEvent(
+                event="agent_update",
+                agent_name="director",
+                payload=next_director_result.model_dump(mode="python"),
+            )
             final_state = self._apply_director_result_to_state(state_after_turn, next_director_result)
             with self._state_lock:
                 self.state = final_state

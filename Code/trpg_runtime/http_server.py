@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import sys
 import threading
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -18,7 +19,11 @@ CODE_ROOT = REPO_ROOT / "Code"
 if str(CODE_ROOT) not in sys.path:
     sys.path.insert(0, str(CODE_ROOT))
 
-from trpg_runtime import MinimalTRPGEngine, PromptRepository, RuntimeOptions
+from trpg_runtime import GameState, MinimalTRPGEngine, PromptRepository, RuntimeOptions
+
+SAVE_ROOT = REPO_ROOT / "Save"
+SESSION_SAVE_DIR = SAVE_ROOT / "session_saves"
+HISTORY_EXPORT_DIR = SAVE_ROOT / "history_exports"
 
 
 def _json_response(handler: BaseHTTPRequestHandler, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
@@ -123,6 +128,8 @@ class SessionRecord:
     opening: str
     created_at: float
     lock: threading.RLock
+    options: RuntimeOptions
+    transcript: list[dict[str, Any]]
 
     @property
     def turns_used(self) -> int:
@@ -181,6 +188,118 @@ def _build_catalog(repo: PromptRepository) -> list[dict[str, Any]]:
     return catalog
 
 
+def _slugify(value: str) -> str:
+    cleaned = "".join(char.lower() if char.isalnum() else "_" for char in value)
+    return "_".join(part for part in cleaned.split("_") if part) or "session"
+
+
+def _timestamp_tag() -> str:
+    return dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def _build_save_name(record: SessionRecord, *, extension: str) -> str:
+    player_tag = _slugify(record.player_name)[:24]
+    turn_tag = f"t{record.turns_used:03d}"
+    return (
+        f"trpg_{_slugify(record.rule_code)}_{_slugify(record.story_code)}_"
+        f"{player_tag}_{turn_tag}_{record.session_id}_{_timestamp_tag()}.{extension}"
+    )
+
+
+def _serialize_transcript(record: SessionRecord) -> list[dict[str, Any]]:
+    transcript: list[dict[str, Any]] = []
+    for item in record.transcript:
+        role = str(item.get("role", "")).strip()
+        if role not in {"system", "player", "ai"}:
+            continue
+        transcript.append(
+            {
+                "role": role,
+                "content": str(item.get("content", "")),
+                "created_at": item.get("created_at"),
+            }
+        )
+    return transcript
+
+
+def _serialize_transcript_text(record: SessionRecord) -> str:
+    lines: list[str] = [
+        f"Session ID: {record.session_id}",
+        f"Rule: {record.rule_code}",
+        f"Story: {record.story_code}",
+        f"Player: {record.player_name}",
+        "",
+    ]
+    for item in record.transcript:
+        role = str(item.get("role", "")).strip()
+        if role not in {"player", "ai"}:
+            continue
+        speaker = "玩家" if role == "player" else "主持人"
+        content = str(item.get("content", "")).strip()
+        if not content:
+            continue
+        lines.append(f"[{speaker}]")
+        lines.append(content)
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _serialize_save_payload(record: SessionRecord) -> dict[str, Any]:
+    return {
+        "version": 2,
+        "saved_at": dt.datetime.now().isoformat(timespec="seconds"),
+        "session": {
+            "session_id": record.session_id,
+            "rule_code": record.rule_code,
+            "story_code": record.story_code,
+            "player_name": record.player_name,
+            "max_turns": record.max_turns,
+            "opening": record.opening,
+            "created_at": record.created_at,
+            "options": asdict(record.options),
+            "state": record.engine.state.model_dump(mode="python"),
+            "transcript": _serialize_transcript(record),
+        },
+    }
+
+
+def _write_json_file(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _write_text_file(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def _list_save_entries() -> list[dict[str, Any]]:
+    if not SESSION_SAVE_DIR.exists():
+        return []
+
+    entries: list[dict[str, Any]] = []
+    for path in sorted(SESSION_SAVE_DIR.glob("*.json"), reverse=True):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            session = payload.get("session", {})
+            state = session.get("state", {})
+            meta = state.get("core", {}).get("meta", {})
+            entries.append(
+                {
+                    "file_name": path.name,
+                    "saved_at": payload.get("saved_at"),
+                    "session_id": session.get("session_id"),
+                    "rule_code": session.get("rule_code"),
+                    "story_code": session.get("story_code"),
+                    "player_name": session.get("player_name"),
+                    "turn_id": meta.get("turn_id", 0),
+                }
+            )
+        except Exception:
+            continue
+    return entries
+
+
 def _serialize_session(record: SessionRecord) -> dict[str, Any]:
     return {
         "session_id": record.session_id,
@@ -193,6 +312,7 @@ def _serialize_session(record: SessionRecord) -> dict[str, Any]:
         "is_finished": record.is_finished,
         "opening": record.opening,
         "state": _serialize_state_summary(record.engine.state),
+        "transcript": _serialize_transcript(record),
     }
 
 
@@ -243,7 +363,15 @@ class TRPGHandler(BaseHTTPRequestHandler):
             _json_response(self, {"rules": self.app.catalog})
             return
 
+        if path == "/api/trpg/saves":
+            _json_response(self, {"saves": _list_save_entries()})
+            return
+
         parts = [part for part in path.split("/") if part]
+        if len(parts) == 6 and parts[:3] == ["api", "trpg", "session"] and parts[4:] == ["history", "export"]:
+            self._export_history(parts[3])
+            return
+
         if len(parts) == 4 and parts[:3] == ["api", "trpg", "session"] and parts[3]:
             record = self.app.sessions.get(parts[3])
             if record is None:
@@ -261,12 +389,20 @@ class TRPGHandler(BaseHTTPRequestHandler):
         parts = [part for part in path.split("/") if part]
 
         try:
+            if path == "/api/trpg/load":
+                self._load_session()
+                return
+
             if path == "/api/trpg/session/stream":
                 self._stream_create_session()
                 return
 
             if path == "/api/trpg/session":
                 self._create_session()
+                return
+
+            if len(parts) == 5 and parts[:3] == ["api", "trpg", "session"] and parts[4] == "save":
+                self._save_session(parts[3])
                 return
 
             if len(parts) == 5 and parts[:3] == ["api", "trpg", "session"] and parts[4] == "turn":
@@ -335,6 +471,14 @@ class TRPGHandler(BaseHTTPRequestHandler):
             opening=opening,
             created_at=time.time(),
             lock=threading.RLock(),
+            options=options,
+            transcript=[
+                {
+                    "role": "ai",
+                    "content": opening,
+                    "created_at": time.time(),
+                }
+            ],
         )
         self.app.sessions.create(record)
         _json_response(self, _serialize_session(record), status=HTTPStatus.CREATED)
@@ -395,6 +539,14 @@ class TRPGHandler(BaseHTTPRequestHandler):
                 opening=opening,
                 created_at=time.time(),
                 lock=threading.RLock(),
+                options=options,
+                transcript=[
+                    {
+                        "role": "ai",
+                        "content": opening,
+                        "created_at": time.time(),
+                    }
+                ],
             )
             self.app.sessions.create(record)
             _stream_response_write(
@@ -438,6 +590,12 @@ class TRPGHandler(BaseHTTPRequestHandler):
                 return
 
             result = record.engine.run_turn(player_text, background_director=True)
+            record.transcript.extend(
+                [
+                    {"role": "player", "content": player_text, "created_at": time.time()},
+                    {"role": "ai", "content": result.narration, "created_at": time.time()},
+                ]
+            )
             _json_response(
                 self,
                 {
@@ -447,6 +605,12 @@ class TRPGHandler(BaseHTTPRequestHandler):
                         "narration": result.narration,
                         "action": result.action.model_dump(mode="python"),
                         "turn_id": result.state.meta.turn_id,
+                        "dicer_result": result.dicer_result.model_dump(mode="python"),
+                        "npc_result": result.npc_result.model_dump(mode="python"),
+                        "director_state_used": result.director_state_used.model_dump(mode="python"),
+                        "next_director_result": result.next_director_result.model_dump(mode="python")
+                        if result.next_director_result is not None
+                        else None,
                     },
                 },
             )
@@ -485,7 +649,18 @@ class TRPGHandler(BaseHTTPRequestHandler):
             )
 
             try:
-                for event in record.engine.stream_turn(player_text, background_director=True):
+                for event in record.engine.stream_turn(player_text, background_director=False):
+                    if event.event == "agent_update":
+                        _stream_response_write(
+                            self,
+                            {
+                                "event": "agent_update",
+                                "agent_name": event.agent_name,
+                                "payload": event.payload,
+                            },
+                        )
+                        continue
+
                     if event.event == "narration_chunk":
                         _stream_response_write(
                             self,
@@ -497,6 +672,12 @@ class TRPGHandler(BaseHTTPRequestHandler):
                         continue
 
                     if event.event == "turn_result" and event.result is not None:
+                        record.transcript.extend(
+                            [
+                                {"role": "player", "content": player_text, "created_at": time.time()},
+                                {"role": "ai", "content": event.result.narration, "created_at": time.time()},
+                            ]
+                        )
                         _stream_response_write(
                             self,
                             {
@@ -507,6 +688,12 @@ class TRPGHandler(BaseHTTPRequestHandler):
                                     "narration": event.result.narration,
                                     "action": event.result.action.model_dump(mode="python"),
                                     "turn_id": event.result.state.meta.turn_id,
+                                    "dicer_result": event.result.dicer_result.model_dump(mode="python"),
+                                    "npc_result": event.result.npc_result.model_dump(mode="python"),
+                                    "director_state_used": event.result.director_state_used.model_dump(mode="python"),
+                                    "next_director_result": event.result.next_director_result.model_dump(mode="python")
+                                    if event.result.next_director_result is not None
+                                    else None,
                                 },
                             },
                         )
@@ -519,6 +706,95 @@ class TRPGHandler(BaseHTTPRequestHandler):
                     },
                 )
                 return
+
+    def _save_session(self, session_id: str) -> None:
+        record = self.app.sessions.get(session_id)
+        if record is None:
+            _json_response(self, {"error": "Session not found"}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        with record.lock:
+            file_name = _build_save_name(record, extension="json")
+            path = SESSION_SAVE_DIR / file_name
+            _write_json_file(path, _serialize_save_payload(record))
+            _json_response(
+                self,
+                {
+                    "ok": True,
+                    "file_name": file_name,
+                    "path": str(path),
+                },
+            )
+
+    def _load_session(self) -> None:
+        payload = _read_json_request(self)
+        file_name = _coerce_str(payload.get("file_name"), default="")
+        if not file_name:
+            raise ValueError("file_name is required")
+
+        path = SESSION_SAVE_DIR / Path(file_name).name
+        if not path.exists():
+            _json_response(self, {"error": "Save file not found"}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        session_payload = raw.get("session", {})
+        rule_code = str(session_payload.get("rule_code", "")).upper()
+        story_code = str(session_payload.get("story_code", "")).strip()
+        player_name = str(session_payload.get("player_name", "玩家")).strip() or "玩家"
+        max_turns = int(session_payload.get("max_turns", 12))
+        opening = str(session_payload.get("opening", "")).strip()
+        options = RuntimeOptions(**dict(session_payload.get("options", {})))
+        state = GameState.model_validate(session_payload.get("state", {}))
+        transcript = list(session_payload.get("transcript", []))
+
+        repo = self.app.repo
+        scenario = repo.load_scenario(rule_code=rule_code, story_code=story_code)
+        engine = MinimalTRPGEngine(
+            scenario=scenario,
+            state=state,
+            prompt_repository=repo,
+            preference_path=self.app.preference_path,
+            registry_path=self.app.registry_path,
+            options=options,
+        )
+        session_id = str(session_payload.get("session_id") or uuid.uuid4().hex[:12])
+        record = SessionRecord(
+            session_id=session_id,
+            engine=engine,
+            rule_code=rule_code,
+            story_code=story_code,
+            player_name=player_name,
+            max_turns=max_turns,
+            opening=opening,
+            created_at=float(session_payload.get("created_at", time.time())),
+            lock=threading.RLock(),
+            options=options,
+            transcript=transcript,
+        )
+        self.app.sessions.create(record)
+        _json_response(self, _serialize_session(record))
+
+    def _export_history(self, session_id: str) -> None:
+        record = self.app.sessions.get(session_id)
+        if record is None:
+            _json_response(self, {"error": "Session not found"}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        with record.lock:
+            content = _serialize_transcript_text(record)
+            file_name = _build_save_name(record, extension="txt")
+            path = HISTORY_EXPORT_DIR / file_name
+            _write_text_file(path, content)
+
+            body = content.encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="{file_name}"')
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
 
 
 def main() -> None:
@@ -539,11 +815,15 @@ def main() -> None:
     print(f"TRPG server listening on http://{args.host}:{args.port}")
     print("Endpoints:")
     print("  GET    /api/trpg/catalog")
+    print("  GET    /api/trpg/saves")
     print("  POST   /api/trpg/session")
     print("  POST   /api/trpg/session/stream")
+    print("  POST   /api/trpg/load")
     print("  GET    /api/trpg/session/<session_id>")
+    print("  POST   /api/trpg/session/<session_id>/save")
     print("  POST   /api/trpg/session/<session_id>/turn")
     print("  POST   /api/trpg/session/<session_id>/turn/stream")
+    print("  GET    /api/trpg/session/<session_id>/history/export")
     print("  DELETE /api/trpg/session/<session_id>")
     print("Press Ctrl+C to stop.")
     try:

@@ -594,9 +594,11 @@ class TurnDebugTrace(BaseModel):
 
 
 class TurnStreamEvent(BaseModel):
-    event: Literal["narration_chunk", "turn_result"] = Field(
+    event: Literal["agent_update", "narration_chunk", "turn_result"] = Field(
         description="Streaming event type emitted during a streamed turn."
     )
+    agent_name: str = Field(default="", description="Agent name for agent_update events.")
+    payload: dict[str, object] = Field(default_factory=dict, description="Agent payload for agent_update events.")
     delta: str = Field(default="", description="Narration text chunk for narration_chunk events.")
     result: TurnResult | None = Field(
         default=None,

@@ -1,0 +1,502 @@
+{
+  "version": 2,
+  "saved_at": "2026-03-17T03:34:10",
+  "session": {
+    "session_id": "d0cdddfccdf4",
+    "rule_code": "ADV",
+    "story_code": "THE_DUST",
+    "player_name": "玩家",
+    "max_turns": 12,
+    "opening": "### 游戏规则简介  \n本场游戏采用写实冒险TRPG的叙事推进方式：以环境细节与风险反馈为核心，通过你的选择与行动来触发结果与分支，不依赖复杂数值面板；超能力存在但有明确限制与生理代价。\n\n### 背景故事概述  \n【背景故事】近未来的荒漠边缘地带，你追踪一支盗掘者小队的车辙来到被风沙吞噬的遗迹「黑砂古城」。遗迹呈四进结构，表层风沙回廊到地下暗室层层深入，内部有流沙与机关，且一场强沙暴将在约一小时内抵达。守陵人后裔阿吉在入口拦下你：他既想借你阻止盗掘者，又因家族誓言对关键情报有所隐瞒。你进入遗迹的理由很明确——要在盗掘者得手前找到他们、弄清他们在找什么，并活着离开。\n\n### 游戏目的  \n【游戏目的】  \n1) **核心目标（调查/阻止）**：追上盗掘者，厘清他们在遗迹深处寻找的“核心”究竟是什么，并在不引发更大后果的前提下阻止其落入不当之手。  \n2) **生存目标（撤离/时间压力）**：在沙暴抵达前完成探索并撤离遗迹，管理水、照明与体力，避免被环境与“异常干扰”拖入不可逆的危险。\n\n### 角色确认（启动游戏所需）  \n你还未建立角色。请用几句话描述：  \n- **身份/职业**（例如：地质勘探员、调查记者、退役工兵、文物修复师、边境警务协作员等）  \n- **你为何追踪盗掘者**（任务、私仇、委托、求证、赎罪……）  \n- **随身关键物品 1-2 件**（除基础装备：水壶、手电、多功能军刀之外）  \n- **是否具备某类“异常能力倾向”**：感知强化 / 物理影响 / 心理影响（可选；若选，说明你过去一次“失控或代价”的经历）  \n\n你给出这些信息后，我就从遗迹入口、阿吉拦路的那一刻开始推进第一幕。",
+    "created_at": 1773732681.58446,
+    "options": {
+      "full_rule_text_for_agents": true,
+      "full_story_text_for_agents": true,
+      "dicer_rule_chars": 4200,
+      "dicer_story_chars": 4200,
+      "npc_rule_chars": 2600,
+      "npc_story_chars": 2200,
+      "director_rule_chars": 2600,
+      "director_story_chars": 2200,
+      "narrator_rule_chars": 1800,
+      "narrator_story_chars": 2200,
+      "opening_rule_chars": 2600,
+      "opening_story_chars": 2600,
+      "recent_event_window": 5,
+      "dicer_dialogue_window": 2,
+      "npc_dialogue_window": 3,
+      "narrator_dialogue_window": 5,
+      "director_dialogue_window": 5,
+      "max_dialogue_window": 5,
+      "background_npc_window": 4,
+      "minutes_per_turn": 5,
+      "max_recent_events": 5,
+      "dicer_temperature": 0.2,
+      "npc_temperature": 0.5,
+      "director_temperature": 0.4,
+      "narrator_temperature": 0.7,
+      "max_parallel_workers": 3
+    },
+    "state": {
+      "core": {
+        "meta": {
+          "schema_version": "2.0",
+          "session_id": "000b1303d57d",
+          "rule_code": "ADV",
+          "story_code": "THE_DUST",
+          "save_revision": 0,
+          "turn_id": 2,
+          "round_id": 0,
+          "phase": "opening",
+          "chapter_id": "opening",
+          "scene_id": "opening",
+          "game_day": 1,
+          "game_hour": 20,
+          "game_minute": 10,
+          "elapsed_minutes": 10
+        },
+        "player": {
+          "actor_id": "player",
+          "name": "玩家",
+          "archetype": "",
+          "background": "",
+          "hp": null,
+          "status": [],
+          "inventory": [],
+          "known_clues": [],
+          "discovered_location_ids": [
+            "opening"
+          ],
+          "short_term_goals": [],
+          "long_term_goals": [],
+          "relationship_notes": [],
+          "preference_tags": []
+        },
+        "scene": {
+          "location_id": "opening",
+          "location": "《黑砂遗迹》—— 单人写实冒险解谜",
+          "description": "- **玩家人数**：1人\n- **主场景**：沙漠废弃遗迹「黑砂古城」（四进结构，风沙侵蚀的石砌建筑，内部暗藏流沙陷阱与古老机关，穹顶漏下的阳光呈金砂状）\n- **威胁类型**：3类（自然威胁：1小时后抵达的强沙暴；人类威胁：3人盗掘者小队；超能力异常：遗迹能量波动引发的感官紊乱）\n- **NPC伙伴**：1个（守陵人后裔阿吉，掌握遗迹传说但因家族誓言隐瞒关键信息）\n- **核心机制**：区域专属临时能力（每个区域触发1种，仅限该区域使用，伴随明确生理代价）\n## **一、场景设计：黑砂古城遗迹**\n### **主场景结构**\n- **区域划分**：\n1. **前厅·风沙回廊**（低风险）：石墙布满风蚀孔洞，地面散落青铜碎片，气流从孔洞灌入时发出呜咽声。\n2. **主殿·星象穹顶**（中风险）：穹顶刻有星图，中央立着残缺的星盘石台，墙角堆着盗掘者遗留的绳索与手电筒。\n3. **侧室·石纹密室**（中风险）：墙壁布满不规则石纹，部分石块可按压，地面有未完全干涸的流沙（踩错区域会下陷）。\n4. **地宫·献祭暗室**（高风险）：低矮石拱结构，...",
+          "visible_npcs": [],
+          "interactive_objects": [],
+          "hazards": [],
+          "exits": [],
+          "scene_flags": [],
+          "tension_level": "steady",
+          "noise_level": 0,
+          "active_clue_ids": [],
+          "deadline_hints": []
+        },
+        "npcs": {},
+        "locations": {
+          "opening": {
+            "location_id": "opening",
+            "name": "《黑砂遗迹》—— 单人写实冒险解谜",
+            "description": "- **玩家人数**：1人\n- **主场景**：沙漠废弃遗迹「黑砂古城」（四进结构，风沙侵蚀的石砌建筑，内部暗藏流沙陷阱与古老机关，穹顶漏下的阳光呈金砂状）\n- **威胁类型**：3类（自然威胁：1小时后抵达的强沙暴；人类威胁：3人盗掘者小队；超能力异常：遗迹能量波动引发的感官紊乱）\n- **NPC伙伴**：1个（守陵人后裔阿吉，掌握遗迹传说但因家族誓言隐瞒关键信息）\n- **核心机制**：区域专属临时能力（每个区域触发1种，仅限该区域使用，伴随明确生理代价）\n## **一、场景设计：黑砂古城遗迹**\n### **主场景结构**\n- **区域划分**：\n1. **前厅·风沙回廊**（低风险）：石墙布满风蚀孔洞，地面散落青铜碎片，气流从孔洞灌入时发出呜咽声。\n2. **主殿·星象穹顶**（中风险）：穹顶刻有星图，中央立着残缺的星盘石台，墙角堆着盗掘者遗留的绳索与手电筒。\n3. **侧室·石纹密室**（中风险）：墙壁布满不规则石纹，部分石块可按压，地面有未完全干涸的流沙（踩错区域会下陷）。\n4. **地宫·献祭暗室**（高风险）：低矮石拱结构，...",
+            "category": "scene",
+            "parent_location_id": null,
+            "discovered": true,
+            "currently_accessible": true,
+            "risk_level": "unknown",
+            "state_flags": [],
+            "visible_features": [],
+            "hidden_feature_ids": [],
+            "item_ids": [],
+            "clue_ids": [],
+            "connected_location_ids": []
+          }
+        },
+        "items": {},
+        "clues": {},
+        "recent_events": [
+          "Tfail:general:目标未明:该输入不构成可执行行动，且包含对既定人物关系与动机的越权改写，无法据此进行成功判定。",
+          "玩家输入为背景改写，未形成可执行行动；未触发机关、能力或时间推进。",
+          "玩家声明行动“寻找阿吉”，但未提供具体手段与范围，判定为不可执行；本回合无时间推进与状态变化。",
+          "连续两轮玩家输入缺少可执行手段，未触发机关/能力/时间推进。"
+        ],
+        "event_records": [
+          {
+            "turn_id": 0,
+            "source": "turn",
+            "summary": "Tfail:general:目标未明:该输入不构成可执行行动，且包含对既定人物关系与动机的越权改写，无法据此进行成功判定。",
+            "tags": []
+          },
+          {
+            "turn_id": 1,
+            "source": "turn",
+            "summary": "玩家声明行动“寻找阿吉”，但未提供具体手段与范围，判定为不可执行；本回合无时间推进与状态变化。",
+            "tags": []
+          }
+        ],
+        "chapter_summary": "# 《黑砂遗迹》—— 单人写实冒险解谜\n## **核心要素**\n- **玩家人数**：1人\n- **主场景**：沙漠废弃遗迹「黑砂古城」（四进结构，风沙侵蚀的石砌建筑，内部暗藏流沙陷阱与古老机关，穹顶漏下的阳光呈金砂状）\n- **威胁类型**：3类（自然威胁：1小时后抵达的强沙暴；人类威胁：3人盗掘者小队；超能力异常：遗迹能量波动引发的感官紊乱）\n- **NPC伙伴**：1个（守陵人后裔阿吉，掌握遗迹传说但因家族誓言隐瞒关键信息）\n- **核心机制**：区域专属临时能力（每个区域触发1种，仅限该区域使用，伴随明确生理代价）\n## **一、场景设计：黑砂古城遗迹**\n### **主场景结构**\n- **区域划分**：\n1. **前厅·风沙回廊**（低风险）：石墙布满风蚀孔洞，地面散落青铜碎片，气流从孔洞灌入时发出呜咽声。\n2. **主殿·星象穹顶**（中风险）：穹顶刻有星图，中央立着残缺的星盘石台，墙角堆着盗掘者遗留的绳索与手电筒。\n3. **侧室·石纹密室**（中风险）：墙壁布满不规则石纹，部分石块可按压，地面有未完全干涸的流沙（踩错区域会下陷）。\n4. **地宫·献祭暗室**（高风险）：低矮石拱结构，空气弥漫铁锈味，中央石台刻着楔形文字，石壁渗出潮湿的黑色结晶。\n### **子场景布局**\n| 区域       | 子场景名称       | 类型       | 关键物品/线索                  | 风险等级 | 区域专属能力（临时）及代价                  |\n|------------|------------------|------------|---------------------------------|----------|---------------------------------------------|\n| 前厅       | 风蚀祭坛         | 机关起点   | 祭坛底座刻着「顺气而行，逆则陷」（提示气流规律）、半块青铜风标 | 低       | **气流感知**：能分辨气流强弱与方...",
+        "player_choices": [
+          {
+            "turn_id": 0,
+            "action_text": "我是马飞，一名退役军人，我和阿吉曾经一起当过兵，现在奉他的请求，前来帮忙",
+            "summary": "general:unspecified",
+            "tags": []
+          },
+          {
+            "turn_id": 1,
+            "action_text": "寻找阿吉",
+            "summary": "general:unspecified",
+            "tags": []
+          }
+        ],
+        "global_flags": []
+      },
+      "rule": {
+        "family": "ADV",
+        "resource_pools": {},
+        "status_effects": [],
+        "tension_meters": {},
+        "unlocked_mechanics": [],
+        "disabled_mechanics": [],
+        "check_history": [
+          {
+            "turn_id": 0,
+            "action_summary": "我是马飞，一名退役军人，我和阿吉曾经一起当过兵，现在奉他的请求，前来帮忙",
+            "outcome": "fail",
+            "consequence": "不触发任何机关/能力/时间推进；需要玩家改为声明“当下要做什么”。",
+            "rule_refs": [
+              "story_reference：开场为“阿吉拦住玩家并警告…递出半块青铜风标”】【scenario_state.opening_scene：阿吉拦下玩家并交出半块青铜风标，未提及旧识关系】【规则：禁止强行推动剧情走向/跳过必要步骤，需基于已给定信息裁定】"
+            ]
+          },
+          {
+            "turn_id": 1,
+            "action_summary": "寻找阿吉",
+            "outcome": "fail",
+            "consequence": "不触发机关/能力/时间推进；需要将行动改写为具体可执行的寻找方式（例如：在入口处低声呼喊并停听回声；沿脚印与车辙观察是否有单独的守陵人足迹；或直接进入前厅并在风蚀祭坛附近搜索/呼唤）。",
+            "rule_refs": [
+              "core_state.scene.visible_npcs 为空；state_focus.scene.visible_npcs 为空",
+              "规则：玩家指令需可执行，避免只给目标不描述手段（rule_reference：指令解析与回应框架）",
+              "上一回合已因“目标未明/不可执行”判失败（rule_state.check_history turn_id 0）"
+            ]
+          }
+        ],
+        "rule_flags": [],
+        "coc": null,
+        "vhs": null,
+        "det": null,
+        "rom": null,
+        "nihon": null,
+        "adv": {
+          "exploration_flags": [],
+          "navigation_progress": []
+        },
+        "generic": null
+      },
+      "scenario": {
+        "title": "《黑砂遗迹》（黑砂古城）",
+        "brief": "单人进入沙漠遗迹追踪盗掘者；沙暴60分钟后掩埋遗迹。需用区域临时能力解机关，避开流沙与盗掘者，并在“献祭核心”处做抉择。",
+        "opening_scene": "玩家追踪车辙到黑砂古城入口，被守陵人后裔阿吉拦下并警告；盗掘者已入内30分钟且带炸药。阿吉交出半块青铜风标并提醒“别信眼睛看到的”。",
+        "current_arc": "进入遗迹与追踪盗掘者",
+        "current_stage": "入口/前厅起步",
+        "objectives": {
+          "OBJ_SURVIVE_STORM": {
+            "objective_id": "OBJ_SURVIVE_STORM",
+            "title": "在沙暴前离开遗迹",
+            "summary": "沙漏漏完前（60分钟）必须离开，否则被流沙掩埋。",
+            "objective_type": "main",
+            "status": "active",
+            "related_actor_ids": [
+              "NPC_AJI",
+              "FACTION_RAIDERS_3"
+            ],
+            "related_clue_ids": [],
+            "related_location_ids": [
+              "LOC_BLACKSAND_CITY"
+            ]
+          },
+          "OBJ_STOP_RAIDERS": {
+            "objective_id": "OBJ_STOP_RAIDERS",
+            "title": "阻止盗掘者获取献祭核心",
+            "summary": "盗掘者目标为地宫“献祭核心”，并用错误标记误导后来者。",
+            "objective_type": "main",
+            "status": "active",
+            "related_actor_ids": [
+              "FACTION_RAIDERS_3"
+            ],
+            "related_clue_ids": [
+              "CLUE_RAIDER_FALSE_MARKS",
+              "CLUE_RADIO_CHATTER"
+            ],
+            "related_location_ids": [
+              "LOC_MAIN_HALL_DOME",
+              "LOC_UNDERGROUND_SACRIFICE"
+            ]
+          },
+          "OBJ_SOLVE_FOYER_PUZZLE": {
+            "objective_id": "OBJ_SOLVE_FOYER_PUZZLE",
+            "title": "解开前厅风沙回廊机关",
+            "summary": "拼合青铜风标并按气流规律移动，找到通往主殿的暗门开关。",
+            "objective_type": "main",
+            "status": "active",
+            "related_actor_ids": [
+              "NPC_AJI"
+            ],
+            "related_clue_ids": [
+              "CLUE_WIND_ALTAR_INSCRIPTION",
+              "CLUE_BRONZE_WIND_VANE_HALF"
+            ],
+            "related_location_ids": [
+              "LOC_FOYER_CORRIDOR"
+            ]
+          },
+          "OBJ_SOLVE_STAR_DOME": {
+            "objective_id": "OBJ_SOLVE_STAR_DOME",
+            "title": "解开主殿星象穹顶星盘",
+            "summary": "用星影/星图连线匹配正确凹槽，转动星盘开启侧室阶梯。",
+            "objective_type": "main",
+            "status": "inactive",
+            "related_actor_ids": [
+              "FACTION_RAIDERS_3",
+              "NPC_AJI"
+            ],
+            "related_clue_ids": [
+              "CLUE_DOME_STAR_SHADOW",
+              "CLUE_RAIDER_STAR_NOTES"
+            ],
+            "related_location_ids": [
+              "LOC_MAIN_HALL_DOME"
+            ]
+          },
+          "OBJ_SOLVE_SIDE_ROOM": {
+            "objective_id": "OBJ_SOLVE_SIDE_ROOM",
+            "title": "解开侧室石纹密室并取得地宫钥匙",
+            "summary": "在流沙下陷压力下按“三横两竖”顺序按压石块，露出木板并拿到钥匙。",
+            "objective_type": "main",
+            "status": "inactive",
+            "related_actor_ids": [
+              "FACTION_RAIDERS_3"
+            ],
+            "related_clue_ids": [
+              "CLUE_CRAFTSMAN_DIARY",
+              "CLUE_STONE_WEAR_MARKS"
+            ],
+            "related_location_ids": [
+              "LOC_SIDE_ROOM_PATTERN"
+            ]
+          },
+          "OBJ_OPEN_UNDERGROUND": {
+            "objective_id": "OBJ_OPEN_UNDERGROUND",
+            "title": "进入地宫并处理炸药威胁",
+            "summary": "用钥匙开门，面对盗掘者老三贴炸药与持枪威胁。",
+            "objective_type": "main",
+            "status": "inactive",
+            "related_actor_ids": [
+              "FACTION_RAIDERS_3"
+            ],
+            "related_clue_ids": [
+              "CLUE_OATH_SCROLL_SOUND_OPENS"
+            ],
+            "related_location_ids": [
+              "LOC_UNDERGROUND_SACRIFICE"
+            ]
+          },
+          "OBJ_CORE_CHOICE": {
+            "objective_id": "OBJ_CORE_CHOICE",
+            "title": "对献祭核心做出抉择",
+            "summary": "核心暴露后，选择交给阿吉守护或用军刀摧毁。",
+            "objective_type": "main",
+            "status": "inactive",
+            "related_actor_ids": [
+              "NPC_AJI"
+            ],
+            "related_clue_ids": [],
+            "related_location_ids": [
+              "LOC_UNDERGROUND_SACRIFICE"
+            ]
+          }
+        },
+        "triggers": {
+          "TRG_STORM_TIMER_START": {
+            "trigger_id": "TRG_STORM_TIMER_START",
+            "trigger_type": "scene_entry",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "玩家进入遗迹（开场）",
+            "effect_summary": "启动60分钟沙暴倒计时；每15分钟穹顶阳光变暗提示时间流逝",
+            "priority": 90
+          },
+          "TRG_FOYER_PUZZLE_START": {
+            "trigger_id": "TRG_FOYER_PUZZLE_START",
+            "trigger_type": "clue",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "两半青铜风标拼合",
+            "effect_summary": "风标自动指向气流最稳定孔洞；引导前厅解谜",
+            "priority": 80
+          },
+          "TRG_MAIN_HALL_RAIDER_RADIO": {
+            "trigger_id": "TRG_MAIN_HALL_RAIDER_RADIO",
+            "trigger_type": "time",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "玩家在主殿停留超过10分钟",
+            "effect_summary": "听到对讲机杂音，暴露盗掘者分布：老二侧室、老三守地宫入口、老大在主殿补标记",
+            "priority": 70
+          },
+          "TRG_SIDE_ROOM_SAND_MISSTEP": {
+            "trigger_id": "TRG_SIDE_ROOM_SAND_MISSTEP",
+            "trigger_type": "clue",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "侧室踩错流沙区域/触发流沙",
+            "effect_summary": "盗掘者呼喊并在5分钟内赶到侧室；同时每按错一次流沙加深并更易引发追兵",
+            "priority": 75
+          },
+          "TRG_ABILITY_OVERLOAD_HALLUCINATION": {
+            "trigger_id": "TRG_ABILITY_OVERLOAD_HALLUCINATION",
+            "trigger_type": "clue",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "同一区域临时能力使用超过3次",
+            "effect_summary": "出现幻象干扰；需闭眼深呼吸10秒破除",
+            "priority": 60
+          },
+          "TRG_UNDERGROUND_CRYSTAL_AMPLIFY": {
+            "trigger_id": "TRG_UNDERGROUND_CRYSTAL_AMPLIFY",
+            "trigger_type": "scene_entry",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "进入地宫且接触/靠近黑色结晶环境",
+            "effect_summary": "放大能力代价（声纹解析后耳鸣伴短暂失聪，难以听盗掘者动静）",
+            "priority": 65
+          },
+          "TRG_UNDERGROUND_FAIL_EXPLOSION": {
+            "trigger_id": "TRG_UNDERGROUND_FAIL_EXPLOSION",
+            "trigger_type": "clue",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "地宫声纹机关失败/未按节奏触发",
+            "effect_summary": "炸药爆炸、地宫坍塌，强制进入摧毁结局走向",
+            "priority": 95
+          },
+          "TRG_SIDE_ROOM_STRUCTURAL_SHAKE": {
+            "trigger_id": "TRG_SIDE_ROOM_STRUCTURAL_SHAKE",
+            "trigger_type": "clue",
+            "enabled": true,
+            "consumed": false,
+            "condition_summary": "侧室流沙区域每踩错1次",
+            "effect_summary": "石墙震动并掉落碎石，可能造成行动迟缓",
+            "priority": 55
+          }
+        },
+        "secrets": {
+          "SEC_AJI_OATH_WITHHOLD": {
+            "secret_id": "SEC_AJI_OATH_WITHHOLD",
+            "title": "阿吉因家族誓言隐瞒关键信息",
+            "summary": "阿吉掌握遗迹传说与誓约内容，但会选择性提示而非全盘告知。",
+            "revealed": false,
+            "known_actor_ids": [
+              "NPC_AJI"
+            ]
+          },
+          "SEC_RAIDER_FALSE_GUIDE": {
+            "secret_id": "SEC_RAIDER_FALSE_GUIDE",
+            "title": "盗掘者故意留下错误星位标记",
+            "summary": "主殿星盘与笔记中的红漆/连线用于误导后来者，需交叉验证。",
+            "revealed": false,
+            "known_actor_ids": [
+              "FACTION_RAIDERS_3"
+            ]
+          }
+        },
+        "world_facts": [
+          "黑砂古城为四进结构遗迹：前厅风沙回廊、主殿星象穹顶、侧室石纹密室、地宫献祭暗室。",
+          "遗迹存在流沙陷阱与古老机关；穹顶漏光可作为时间与解谜要素。",
+          "沙暴将在游戏内60分钟后抵达并以约3米流沙掩埋遗迹。",
+          "每个区域会触发一种仅限该区域使用的临时能力，且有明确生理代价；离开区域能力消失。",
+          "盗掘者为3人小队，携带铁锹、对讲机，目标为地宫“献祭核心”，并带炸药。",
+          "地宫黑色结晶会放大能力代价。",
+          "玩家初始资源：1壶水（3次）、手电筒（40分钟；地宫必须用）、多功能军刀。",
+          "阿吉为守陵人后裔，携带刻有遗迹地图的青铜短刀；祖父曾因阻止盗掘者被杀。"
+        ],
+        "unresolved_questions": [
+          "献祭核心是否真能“操控沙暴”，以及其运作原理是什么？",
+          "阿吉具体隐瞒了哪些关于遗迹/核心的关键信息？"
+        ],
+        "active_branch_flags": [
+          "FLAG_STORM_COUNTDOWN_ACTIVE",
+          "FLAG_RAIDERS_ACTIVE",
+          "FLAG_AJI_COMPANION_PRESENT"
+        ],
+        "foreshadow_queue": [
+          "入口处的‘别信眼睛看到的’做一次小示范：脚印在某段看似消失但其实被风覆盖；或回声让距离判断失真，暗示后续感官紊乱。",
+          "阿吉的家族誓言隐瞒：他即便给提示也会很短、偏操作层面，不解释原因。"
+        ],
+        "ending_candidates": [
+          "守护结局：将献祭核心交给阿吉刻印守护，流沙退去，盗掘者被沙暴困住，玩家离开。",
+          "摧毁结局：用军刀砸碎核心引发坍塌；玩家从应急通道爬出，阿吉被流沙掩埋并留下指责。"
+        ],
+        "fail_state": "沙暴到达或地宫炸药爆炸/坍塌导致被流沙掩埋（或被迫走向摧毁结局）。"
+      },
+      "agent_runtime": {
+        "director": {
+          "pace_status": "stalled (input remains non-executable for 2 turns)",
+          "current_tone": "grounded, urgent, slightly tightening pressure",
+          "pending_guidance": [
+            "节奏判定：已连续两轮“目标未明/不可执行”，属于轻度卡关并有继续停滞风险。下一轮 Narrator 需要把玩家从“想法/目标”拉回“动作/手段”，并尽量让玩家只需补齐一个动词+一个对象就能进入判定。",
+            "建议采用“强约束的动作模板 + 立即反馈”的结构：先给一个可直接照抄的句式（如“我贴着拱门内侧/蹲下看脚印/踏进前厅到祭坛，用手电/侧耳听/用军刀拨沙，来确认阿吉是否在附近”），再给 2-3 个同等可行选项，避免玩家再次只回“找阿吉”。",
+            "为软纠正并避免第三次失败：允许阿吉以‘不现身但可被感知的存在’介入一次（不违背 visible_npcs 为空）：例如拱门侧后方传来一声短促的咳/金属轻碰石头声/压低的“别站在风口”，让玩家有明确方向去“靠近声源/绕到侧面查看”。这不算正式出场对话，只是环境级提示。",
+            "同时把自然威胁做成可感知的递进：风墙低鸣更近、沙粒更密、拱门内落石频率略增；但不要直接报倒计时数字，也不要推进 elapsed_minutes（除非玩家做出明确行动）。",
+            "盗掘者存在感继续保持‘远处断续电流杂音’即可，不触发主殿10分钟对讲机事件；避免在入口阶段过早给出分布情报。",
+            "若玩家选择“直接进入前厅”，即可顺势把镜头切到风沙回廊与风蚀祭坛，并准备让其接触到‘青铜碎片/刻字’与区域临时能力的触发前置（但能力与机关仍需玩家明确检查/拼合才触发 TRG_FOYER_PUZZLE_START）。",
+            "入口处的‘别信眼睛看到的’做一次小示范：脚印在某段看似消失但其实被风覆盖；或回声让距离判断失真，暗示后续感官紊乱。",
+            "阿吉的家族誓言隐瞒：他即便给提示也会很短、偏操作层面，不解释原因。"
+          ],
+          "triggered_events": [],
+          "endgame": false
+        },
+        "last_narration": "夜色压在沙漠上，风从远处的沙丘间穿过，夹着细碎的黑砂，打在脸上像一层粗糙的磨砂。黑砂古城的石拱门半埋在沙里，风蚀留下的孔洞像一排空洞的眼眶；拱门内时不时传来“咔啦”一声轻响，像是某块松动的石头在暗处掉落。\n\n你停在入口外，试图“寻找阿吉”。可你没有喊他、没有沿着脚印去追、也没有绕到拱门侧面去查看，更没有踏进前厅去搜——只是一个笼统的念头。风声吞掉了你的犹豫，遗迹也没有给出任何回应：没有人影从阴影里走出来，也没有一句话从门内传回。时间仿佛卡在原地，局势却并不因此变得更安全——风的“质地”在变硬，沙粒密度一点点增大，远处像有一堵看不见的风墙在低沉地滚动。\n\n地面上，新鲜的车辙和凌乱的脚印仍旧清晰地指向拱门深处，但其中有一小段痕迹被阵风抹得模糊，像有人刻意扫过、又像只是风在欺骗你的眼睛。你侧耳时，隐约能捕捉到遗迹深处极远的断续杂音——像对讲机的电流声，时有时无，证明里面确实有人在推进。\n\n眼下，你需要把“找阿吉”变成一个具体动作，才能让事情发生。你可以选择例如：\n\n1) **在入口处压低声音呼喊**：靠近拱门内侧，喊一声“阿吉”，然后停下来听回声与脚步回应。  \n2) **沿脚印与车辙做近距离观察**：蹲下检查脚印数量、深浅、是否有单独的来回足迹，判断阿吉是否在附近徘徊或跟进。  \n3) **直接进入前厅**：踏进风沙回廊，去找风蚀祭坛与散落的青铜碎片，一边搜索一边呼唤（但也意味着更靠近机关与流沙）。\n\n告诉我你打算怎么做：你去哪里、用什么方式、范围多大。这样你才能真正“找到”或“没找到”，并承担相应的后果。",
+        "last_player_action_text": "寻找阿吉",
+        "dialogue_window": [
+          {
+            "turn_id": 0,
+            "player_text": "我是马飞，一名退役军人，我和阿吉曾经一起当过兵，现在奉他的请求，前来帮忙",
+            "narrator_text": "夜色压在沙漠上，风从远处的沙丘间穿过，带着细碎的砂砾，打在脸上像一层粗糙的磨砂。黑砂古城的石拱门半埋在沙里，风蚀留下的孔洞像空洞的眼眶；拱门内偶尔传来“咔啦”一声轻响，像是某块松动的石头在暗处掉落。\n\n你站在入口外，视线顺着地面能看到新鲜的车辙与凌乱的脚印一路延伸进遗迹深处——盗掘者已经进去了，而且带着炸药。沙暴也在路上；你没有办法精确知道它什么时候会吞没这里，但风的味道已经开始变“硬”，像是更大的风墙正在聚集。\n\n你开口报出一个名字、讲起一段你与阿吉的“旧关系”，可这话落在风里，没有换来任何现实的变化：没有人因此放下戒备，也没有任何门为你自动打开。遗迹仍旧沉默，入口仍旧危险，时间也像被按住了一样，没有因为这句话而向前迈一步。\n\n眼下，你需要做的不是“你是谁”，而是“你现在要做什么”。\n\n你可以立刻做的事，比如：\n1) **走近拱门，观察地面与石壁**：确认脚印数量、方向，看看入口附近有没有机关痕迹或可利用的遮蔽。  \n2) **进入前厅·风沙回廊**：寻找风蚀祭坛与散落的青铜碎片，尝试按气流规律推进。  \n3) **在入口处先压低动静、侧耳听**：听遗迹里是否有对讲机杂音、脚步或金属碰撞声，判断盗掘者离入口多远。  \n\n告诉我你要选哪一种，或者用你自己的方式描述“当下要做的具体动作”。",
+            "action_summary": "general:unspecified",
+            "outcome": "fail"
+          },
+          {
+            "turn_id": 1,
+            "player_text": "寻找阿吉",
+            "narrator_text": "夜色压在沙漠上，风从远处的沙丘间穿过，夹着细碎的黑砂，打在脸上像一层粗糙的磨砂。黑砂古城的石拱门半埋在沙里，风蚀留下的孔洞像一排空洞的眼眶；拱门内时不时传来“咔啦”一声轻响，像是某块松动的石头在暗处掉落。\n\n你停在入口外，试图“寻找阿吉”。可你没有喊他、没有沿着脚印去追、也没有绕到拱门侧面去查看，更没有踏进前厅去搜——只是一个笼统的念头。风声吞掉了你的犹豫，遗迹也没有给出任何回应：没有人影从阴影里走出来，也没有一句话从门内传回。时间仿佛卡在原地，局势却并不因此变得更安全——风的“质地”在变硬，沙粒密度一点点增大，远处像有一堵看不见的风墙在低沉地滚动。\n\n地面上，新鲜的车辙和凌乱的脚印仍旧清晰地指向拱门深处，但其中有一小段痕迹被阵风抹得模糊，像有人刻意扫过、又像只是风在欺骗你的眼睛。你侧耳时，隐约能捕捉到遗迹深处极远的断续杂音——像对讲机的电流声，时有时无，证明里面确实有人在推进。\n\n眼下，你需要把“找阿吉”变成一个具体动作，才能让事情发生。你可以选择例如：\n\n1) **在入口处压低声音呼喊**：靠近拱门内侧，喊一声“阿吉”，然后停下来听回声与脚步回应。  \n2) **沿脚印与车辙做近距离观察**：蹲下检查脚印数量、深浅、是否有单独的来回足迹，判断阿吉是否在附近徘徊或跟进。  \n3) **直接进入前厅**：踏进风沙回廊，去找风蚀祭坛与散落的青铜碎片，一边搜索一边呼唤（但也意味着更靠近机关与流沙）。\n\n告诉我你打算怎么做：你去哪里、用什么方式、范围多大。这样你才能真正“找到”或“没找到”，并承担相应的后果。",
+            "action_summary": "general:unspecified",
+            "outcome": "fail"
+          }
+        ],
+        "narrator_memory": [],
+        "dicer_notes": [],
+        "npc_manager_notes": []
+      }
+    },
+    "transcript": [
+      {
+        "role": "ai",
+        "content": "### 游戏规则简介  \n本场游戏采用写实冒险TRPG的叙事推进方式：以环境细节与风险反馈为核心，通过你的选择与行动来触发结果与分支，不依赖复杂数值面板；超能力存在但有明确限制与生理代价。\n\n### 背景故事概述  \n【背景故事】近未来的荒漠边缘地带，你追踪一支盗掘者小队的车辙来到被风沙吞噬的遗迹「黑砂古城」。遗迹呈四进结构，表层风沙回廊到地下暗室层层深入，内部有流沙与机关，且一场强沙暴将在约一小时内抵达。守陵人后裔阿吉在入口拦下你：他既想借你阻止盗掘者，又因家族誓言对关键情报有所隐瞒。你进入遗迹的理由很明确——要在盗掘者得手前找到他们、弄清他们在找什么，并活着离开。\n\n### 游戏目的  \n【游戏目的】  \n1) **核心目标（调查/阻止）**：追上盗掘者，厘清他们在遗迹深处寻找的“核心”究竟是什么，并在不引发更大后果的前提下阻止其落入不当之手。  \n2) **生存目标（撤离/时间压力）**：在沙暴抵达前完成探索并撤离遗迹，管理水、照明与体力，避免被环境与“异常干扰”拖入不可逆的危险。\n\n### 角色确认（启动游戏所需）  \n你还未建立角色。请用几句话描述：  \n- **身份/职业**（例如：地质勘探员、调查记者、退役工兵、文物修复师、边境警务协作员等）  \n- **你为何追踪盗掘者**（任务、私仇、委托、求证、赎罪……）  \n- **随身关键物品 1-2 件**（除基础装备：水壶、手电、多功能军刀之外）  \n- **是否具备某类“异常能力倾向”**：感知强化 / 物理影响 / 心理影响（可选；若选，说明你过去一次“失控或代价”的经历）  \n\n你给出这些信息后，我就从遗迹入口、阿吉拦路的那一刻开始推进第一幕。",
+        "created_at": 1773732681.58446
+      },
+      {
+        "role": "player",
+        "content": "我是马飞，一名退役军人，我和阿吉曾经一起当过兵，现在奉他的请求，前来帮忙",
+        "created_at": 1773732796.7796416
+      },
+      {
+        "role": "ai",
+        "content": "夜色压在沙漠上，风从远处的沙丘间穿过，带着细碎的砂砾，打在脸上像一层粗糙的磨砂。黑砂古城的石拱门半埋在沙里，风蚀留下的孔洞像空洞的眼眶；拱门内偶尔传来“咔啦”一声轻响，像是某块松动的石头在暗处掉落。\n\n你站在入口外，视线顺着地面能看到新鲜的车辙与凌乱的脚印一路延伸进遗迹深处——盗掘者已经进去了，而且带着炸药。沙暴也在路上；你没有办法精确知道它什么时候会吞没这里，但风的味道已经开始变“硬”，像是更大的风墙正在聚集。\n\n你开口报出一个名字、讲起一段你与阿吉的“旧关系”，可这话落在风里，没有换来任何现实的变化：没有人因此放下戒备，也没有任何门为你自动打开。遗迹仍旧沉默，入口仍旧危险，时间也像被按住了一样，没有因为这句话而向前迈一步。\n\n眼下，你需要做的不是“你是谁”，而是“你现在要做什么”。\n\n你可以立刻做的事，比如：\n1) **走近拱门，观察地面与石壁**：确认脚印数量、方向，看看入口附近有没有机关痕迹或可利用的遮蔽。  \n2) **进入前厅·风沙回廊**：寻找风蚀祭坛与散落的青铜碎片，尝试按气流规律推进。  \n3) **在入口处先压低动静、侧耳听**：听遗迹里是否有对讲机杂音、脚步或金属碰撞声，判断盗掘者离入口多远。  \n\n告诉我你要选哪一种，或者用你自己的方式描述“当下要做的具体动作”。",
+        "created_at": 1773732796.7796416
+      },
+      {
+        "role": "player",
+        "content": "寻找阿吉",
+        "created_at": 1773732850.5752802
+      },
+      {
+        "role": "ai",
+        "content": "夜色压在沙漠上，风从远处的沙丘间穿过，夹着细碎的黑砂，打在脸上像一层粗糙的磨砂。黑砂古城的石拱门半埋在沙里，风蚀留下的孔洞像一排空洞的眼眶；拱门内时不时传来“咔啦”一声轻响，像是某块松动的石头在暗处掉落。\n\n你停在入口外，试图“寻找阿吉”。可你没有喊他、没有沿着脚印去追、也没有绕到拱门侧面去查看，更没有踏进前厅去搜——只是一个笼统的念头。风声吞掉了你的犹豫，遗迹也没有给出任何回应：没有人影从阴影里走出来，也没有一句话从门内传回。时间仿佛卡在原地，局势却并不因此变得更安全——风的“质地”在变硬，沙粒密度一点点增大，远处像有一堵看不见的风墙在低沉地滚动。\n\n地面上，新鲜的车辙和凌乱的脚印仍旧清晰地指向拱门深处，但其中有一小段痕迹被阵风抹得模糊，像有人刻意扫过、又像只是风在欺骗你的眼睛。你侧耳时，隐约能捕捉到遗迹深处极远的断续杂音——像对讲机的电流声，时有时无，证明里面确实有人在推进。\n\n眼下，你需要把“找阿吉”变成一个具体动作，才能让事情发生。你可以选择例如：\n\n1) **在入口处压低声音呼喊**：靠近拱门内侧，喊一声“阿吉”，然后停下来听回声与脚步回应。  \n2) **沿脚印与车辙做近距离观察**：蹲下检查脚印数量、深浅、是否有单独的来回足迹，判断阿吉是否在附近徘徊或跟进。  \n3) **直接进入前厅**：踏进风沙回廊，去找风蚀祭坛与散落的青铜碎片，一边搜索一边呼唤（但也意味着更靠近机关与流沙）。\n\n告诉我你打算怎么做：你去哪里、用什么方式、范围多大。这样你才能真正“找到”或“没找到”，并承担相应的后果。",
+        "created_at": 1773732850.5752802
+      }
+    ]
+  }
+}

@@ -44,6 +44,12 @@ export interface SessionStateSummary {
   rule_family: string;
 }
 
+export interface TranscriptEntry {
+  role: "system" | "player" | "ai";
+  content: string;
+  created_at?: number;
+}
+
 export interface SessionResponse {
   session_id: string;
   rule_code: string;
@@ -55,6 +61,7 @@ export interface SessionResponse {
   is_finished: boolean;
   opening: string;
   state: SessionStateSummary;
+  transcript: TranscriptEntry[];
 }
 
 export interface TurnResponse {
@@ -70,12 +77,22 @@ export interface TurnResponse {
       tags: string[];
     };
     turn_id: number;
+    dicer_result?: Record<string, unknown>;
+    npc_result?: Record<string, unknown>;
+    director_state_used?: Record<string, unknown>;
+    next_director_result?: Record<string, unknown> | null;
   };
 }
 
 export interface StreamTurnChunkEvent {
   event: "narration_chunk";
   delta: string;
+}
+
+export interface StreamTurnAgentEvent {
+  event: "agent_update";
+  agent_name: "dicer" | "npc_manager" | "director_state" | "director" | string;
+  payload: Record<string, unknown>;
 }
 
 export interface StreamTurnStartEvent {
@@ -95,7 +112,12 @@ export interface StreamTurnErrorEvent {
   error: string;
 }
 
-export type StreamTurnEvent = StreamTurnStartEvent | StreamTurnChunkEvent | StreamTurnResultEvent | StreamTurnErrorEvent;
+export type StreamTurnEvent =
+  | StreamTurnStartEvent
+  | StreamTurnAgentEvent
+  | StreamTurnChunkEvent
+  | StreamTurnResultEvent
+  | StreamTurnErrorEvent;
 
 export interface StreamSessionLogEvent {
   event: "runtime_log";
@@ -116,6 +138,16 @@ export interface CreateSessionRequest {
   story_code: string;
   player_name: string;
   max_turns: number;
+}
+
+export interface SaveEntry {
+  file_name: string;
+  saved_at?: string;
+  session_id?: string;
+  rule_code?: string;
+  story_code?: string;
+  player_name?: string;
+  turn_id?: number;
 }
 
 const baseEndpoint = (import.meta.env.VITE_TRPG_ENDPOINT ?? "http://127.0.0.1:8788").replace(/\/+$/, "");
@@ -257,4 +289,35 @@ export function deleteSession(sessionId: string): Promise<{ ok: boolean; session
   return requestJson<{ ok: boolean; session_id: string }>(`/api/trpg/session/${sessionId}`, {
     method: "DELETE",
   });
+}
+
+export function listSaves(): Promise<{ saves: SaveEntry[] }> {
+  return requestJson<{ saves: SaveEntry[] }>("/api/trpg/saves");
+}
+
+export function saveSession(sessionId: string): Promise<{ ok: boolean; file_name: string; path: string }> {
+  return requestJson<{ ok: boolean; file_name: string; path: string }>(`/api/trpg/session/${sessionId}/save`, {
+    method: "POST",
+  });
+}
+
+export function loadSession(fileName: string): Promise<SessionResponse> {
+  return requestJson<SessionResponse>("/api/trpg/load", {
+    method: "POST",
+    body: JSON.stringify({ file_name: fileName }),
+  });
+}
+
+export async function exportHistory(sessionId: string): Promise<{ blob: Blob; fileName: string }> {
+  const response = await fetch(`${baseEndpoint}/api/trpg/session/${sessionId}/history/export`);
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `HTTP ${response.status}`);
+  }
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename=\"?([^"]+)\"?/i);
+  return {
+    blob: await response.blob(),
+    fileName: match?.[1] ?? `trpg_history_${sessionId}.txt`,
+  };
 }
