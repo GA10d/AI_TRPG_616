@@ -1,0 +1,266 @@
+{
+  "title": "雪葬灯笼（The Snowbound Lanterns）",
+  "brief": "白坂村半月来出现“雪夜灯笼”：无人点火却自明的白纸灯笼出现在屋前/村口，次日对应家庭成员失踪。村民对失踪异常冷淡，似乎与“去年冬天的决定”有关。玩家介入处理疑似妖鬼作祟，并在调查中面对伦理裁决与代价。",
+  "opening_scene": "玩家抵达信浓国北境白坂村，听闻雪夜灯笼与失踪传言；村口老杉树挂着会变多的白灯笼，村民一边数灯一边祈祷别轮到自己家。",
+  "current_arc": "调查与裁决",
+  "current_stage": "传闻入村",
+  "objectives": {
+    "obj_identify_threat": {
+      "objective_id": "obj_identify_threat",
+      "title": "识别威胁是否为妖鬼",
+      "summary": "确认雪夜灯笼与失踪的成因与机制。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "npc_snow_lantern_ghost_alamp",
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_village_gate_cedar",
+        "loc_missing_homes",
+        "loc_snow_valley"
+      ]
+    },
+    "obj_stop_disappearances": {
+      "objective_id": "obj_stop_disappearances",
+      "title": "阻止失踪继续发生",
+      "summary": "在压力推进下减少/阻断新的“点名带走”。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "npc_snow_lantern_ghost_alamp",
+        "npc_boy_rinta"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_village_gate_cedar",
+        "loc_snow_valley"
+      ]
+    },
+    "obj_prevent_spread_shogunate": {
+      "objective_id": "obj_prevent_spread_shogunate",
+      "title": "防止扩散到邻村或引发幕府镇压",
+      "summary": "控制事态与信息外泄，避免幕府哨探确认“村中不稳”。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_headman_house",
+        "loc_temple_hall"
+      ]
+    },
+    "obj_find_why_lanterns": {
+      "objective_id": "obj_find_why_lanterns",
+      "title": "弄清灯笼为何出现",
+      "summary": "追到“去年冬天决定/名单/灯仓”的因果链。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "npc_headman_shirasaka_chuzo",
+        "npc_oldwoman_aku",
+        "npc_snow_lantern_ghost_alamp"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_headman_house",
+        "loc_old_lantern_storehouse",
+        "loc_lantern_maker_house"
+      ]
+    },
+    "obj_judgement_kill_or_not": {
+      "objective_id": "obj_judgement_kill_or_not",
+      "title": "判断妖鬼是否应被斩",
+      "summary": "在真相与代价之间做出裁决：斩杀、公开、背责或止损。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "npc_snow_lantern_ghost_alamp",
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku",
+        "npc_hunter_jinbei"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_old_lantern_storehouse",
+        "loc_snow_valley"
+      ]
+    },
+    "obj_decide_truth_handling": {
+      "objective_id": "obj_decide_truth_handling",
+      "title": "决定真相应被埋葬、公开、还是由他人背负",
+      "summary": "选择信息与责任的去向，并承担连锁后果。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_headman_house",
+        "loc_temple_hall"
+      ]
+    }
+  },
+  "triggers": {
+    "trg_pressure_advance_on_delay": {
+      "trigger_id": "trg_pressure_advance_on_delay",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "每次过夜/拖延一次或行动失败一次",
+      "effect_summary": "压力推进+1并投放对应事件（灯数+1→新增失踪→私刑苗头→献祭提案→幕府哨探→崩坏态）",
+      "priority": 80
+    },
+    "trg_collapse_missing_3": {
+      "trigger_id": "trg_collapse_missing_3",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家抵达后新增失踪人数≥3",
+      "effect_summary": "进入崩坏态：从调查/裁决转为止损/背锅/逃亡",
+      "priority": 90
+    },
+    "trg_collapse_lynch_or_sacrifice": {
+      "trigger_id": "trg_collapse_lynch_or_sacrifice",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "村民开始私刑或献祭行为",
+      "effect_summary": "进入崩坏态并加速暴力与替罪羊路线",
+      "priority": 90
+    },
+    "trg_collapse_shogunate_confirms_unrest": {
+      "trigger_id": "trg_collapse_shogunate_confirms_unrest",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "幕府哨探介入并确认“村中不稳”",
+      "effect_summary": "进入崩坏态并触发清算链风险",
+      "priority": 95
+    },
+    "trg_dilemma_nodes_when_close_truth": {
+      "trigger_id": "trg_dilemma_nodes_when_close_truth",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家接近底层真相或压力推进≥3",
+      "effect_summary": "投放两难节点：替罪羊/烧灯仓/寺社献祭（选1-2）",
+      "priority": 70
+    },
+    "trg_rinta_follows_lantern": {
+      "trigger_id": "trg_rinta_follows_lantern",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "凛太被逼急或恐惧升级",
+      "effect_summary": "凛太夜里跟着灯走，制造新的失踪事件",
+      "priority": 60
+    },
+    "trg_alamp_escalates_whole_village_snow": {
+      "trigger_id": "trg_alamp_escalates_whole_village_snow",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "雪灯鬼阿灯被逼急（被辱为怪物/再次牺牲无辜/强行定性“你错了”）",
+      "effect_summary": "从点名带走升级为“整村入雪”（崩坏态方向）",
+      "priority": 85
+    }
+  },
+  "secrets": {
+    "sec_last_winter_decision_exists": {
+      "secret_id": "sec_last_winter_decision_exists",
+      "title": "去年冬天有过“决定”且被抹去细节",
+      "summary": "村里存在统一口风与被撕账页/名册缺口，暗示曾做过不可公开的集体决议。",
+      "revealed": false,
+      "known_actor_ids": [
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku",
+        "npc_hunter_jinbei",
+        "npc_oldwoman_aku"
+      ]
+    },
+    "sec_alamp_on_surplus_list": {
+      "secret_id": "sec_alamp_on_surplus_list",
+      "title": "阿灯被写进“多余者名单”",
+      "summary": "底层真相之一：阿灯被列入应被处理的名单。",
+      "revealed": false,
+      "known_actor_ids": [
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku"
+      ]
+    },
+    "sec_alamp_entered_storehouse_voluntarily": {
+      "secret_id": "sec_alamp_entered_storehouse_voluntarily",
+      "title": "阿灯自愿进入灯仓（在“被允许”的语境下）",
+      "summary": "更接近共同允许发生的死亡，而非单纯谋杀现场。",
+      "revealed": false,
+      "known_actor_ids": [
+        "npc_headman_shirasaka_chuzo",
+        "npc_monk_enjaku",
+        "npc_oldwoman_aku"
+      ]
+    },
+    "sec_waited_three_days_lit_lanterns": {
+      "secret_id": "sec_waited_three_days_lit_lanterns",
+      "title": "她点灯等了三天",
+      "summary": "灯仓三处坐痕与“三天”等待，构成雪夜灯笼因果回响的核心意象。",
+      "revealed": false,
+      "known_actor_ids": [
+        "npc_snow_lantern_ghost_alamp"
+      ]
+    },
+    "sec_ghost_executes_rule_not_rampage": {
+      "secret_id": "sec_ghost_executes_rule_not_rampage",
+      "title": "妖鬼不是狂暴复仇，而是继续执行规则",
+      "summary": "阿灯不主动杀戮、不撒谎、不解释；灯更像点名通知，被照者自己走入雪谷。",
+      "revealed": false,
+      "known_actor_ids": [
+        "npc_snow_lantern_ghost_alamp"
+      ]
+    }
+  },
+  "world_facts": [
+    "地点：信浓国北境白坂村",
+    "半月来出现“雪夜灯笼”：无人点火却自明的白纸灯笼夜间出现，次日对应家庭成员失踪",
+    "失踪无血迹与挣扎；雪谷出现单人脚印走向谷底后消失，深浅像自愿行走",
+    "村民对失踪反应冷淡，常以“报应/应得”解释，并回避谈论去年冬天",
+    "村口老杉树常挂2-3盏白灯笼，数量会变，风吹时光不晃",
+    "村长屋账本有被撕页、人口名册有缺口；村长不愿公开去年决议细节",
+    "寺社香火弱，往生牌位少一块，经卷夹着一缕灯芯",
+    "灯匠旧屋留有未糊完灯骨与工艺材料，但更像停止后的遗留",
+    "旧灯仓在山腰禁地，门从外钉死，内有抓痕与三处坐痕，地上有焦黑灯油滴",
+    "雪灯鬼名为阿灯（16），动机是让“决定”继续完成、让被遗忘者被记起；只谈灯/走/名单/冬天"
+  ],
+  "unresolved_questions": [
+    "去年冬天的“决定”具体内容是什么？谁参与、如何执行？",
+    "雪夜灯笼的点名规则是什么（与名单/参与者的关系）？",
+    "如何在不引发幕府清算的情况下终止失踪？",
+    "若斩杀阿灯，村庄的牺牲逻辑是否会被固化并继续伤人？"
+  ],
+  "active_branch_flags": [
+    "pressure_engine_active",
+    "truth_suppressed_last_winter"
+  ],
+  "foreshadow_queue": [
+    "灯更像“点名通知”而非立刻杀人",
+    "村长是“承担者”而非快意加害者",
+    "僧人更站秩序与因果，可能推动献祭或密报",
+    "烧灯仓/替罪羊/献祭会激化怨与崩坏",
+    "幕府哨探出现将把村庄推向清算链",
+    "最后一盏灯出现在玩家落脚处：邀请背责而非威胁"
+  ],
+  "ending_candidates": [
+    "斩杀路径：快速止血但牺牲逻辑固化（血债/污名）",
+    "公开路径：以证据链换终止，但引发幕府清算与村庄瓦解（招府/失民）",
+    "背责路径：玩家或关键NPC承担责任叙事，换取暂时稳定但长期被追责（污名/血债）",
+    "拖延失控：反复失败或不作为导致村庄自毁或鬼域扩张（崩坏态）"
+  ],
+  "fail_state": "崩坏态：失踪累积、私刑/献祭或幕府确认不稳后，事态从调查转为止损/背锅/逃亡；雪灯鬼可能扩大带走范围或村内爆发暴力。"
+}

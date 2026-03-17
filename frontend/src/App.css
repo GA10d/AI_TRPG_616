@@ -143,7 +143,8 @@
   font-size: var(--fs-18);
 }
 
-.story-card pre {
+.story-card pre,
+.story-rich-text {
   margin: 0;
   padding: var(--space-4);
   overflow: auto;
@@ -151,6 +152,11 @@
   line-height: 1.65;
   font-size: var(--fs-14);
   font-family: var(--font-serif);
+}
+
+.story-rich-text {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .status-card {
@@ -164,6 +170,67 @@
 .status-card h3 {
   margin: 0 0 var(--space-3);
   font-size: var(--fs-18);
+}
+
+.session-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.session-form label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--fs-13);
+  color: var(--text-secondary);
+}
+
+.session-form input,
+.session-form select {
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-surface-elevated) 86%, transparent);
+  color: var(--text-primary);
+  padding: 8px 10px;
+}
+
+.session-form input:focus,
+.session-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.session-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.session-form-actions button {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border-soft));
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--bg-surface-elevated));
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.session-form-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.form-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-12);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.form-note.error {
+  color: #d47171;
 }
 
 .status-card ul {
@@ -187,6 +254,12 @@
 
 .status-card li span {
   color: var(--text-secondary);
+}
+
+.status-card li strong {
+  max-width: 68%;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .character-card {
@@ -500,6 +573,49 @@
 .chat-bubble p {
   margin: 0;
   font-size: var(--fs-16);
+  line-height: var(--lh-base);
+  overflow-wrap: anywhere;
+}
+
+.chat-bubble-body {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.rich-text {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.rich-text-heading {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.rich-text-heading.level-1,
+.rich-text-heading.level-2 {
+  font-size: 1.05rem;
+}
+
+.rich-text-heading.level-3 {
+  font-size: 0.98rem;
+}
+
+.rich-text-paragraph {
+  margin: 0;
+  font-size: var(--fs-16);
+  line-height: var(--lh-base);
+  overflow-wrap: anywhere;
+}
+
+.rich-text-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rich-text-list li {
   line-height: var(--lh-base);
   overflow-wrap: anywhere;
 }

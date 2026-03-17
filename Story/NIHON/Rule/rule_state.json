@@ -1,0 +1,22 @@
+{
+  "family": "NIHON",
+  "resource_pools": {},
+  "status_effects": [],
+  "tension_meters": {},
+  "unlocked_mechanics": [],
+  "disabled_mechanics": [],
+  "check_history": [],
+  "rule_flags": [],
+  "coc": null,
+  "vhs": null,
+  "det": null,
+  "rom": null,
+  "nihon": {
+    "karma_tags": [],
+    "sacrifice_threshold": null,
+    "corruption": 0,
+    "moral_debt": []
+  },
+  "adv": null,
+  "generic": null
+}

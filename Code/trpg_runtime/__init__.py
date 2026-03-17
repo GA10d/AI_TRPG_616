@@ -1,3 +1,10 @@
+from pathlib import Path
+import sys
+
+CODE_ROOT = Path(__file__).resolve().parents[1]
+if str(CODE_ROOT) not in sys.path:
+    sys.path.insert(0, str(CODE_ROOT))
+
 from .engine import MinimalTRPGEngine, RuntimeOptions, create_initial_state, parse_player_action
 from .models import (
     AgentRuntimeState,
