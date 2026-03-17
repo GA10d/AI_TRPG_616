@@ -1,0 +1,209 @@
+{
+  "title": "《雾都魅影：布莱克伍德庄园谋杀案》",
+  "brief": "1887年伦敦，布莱克伍德庄园密室杀人案：死者阿尔弗雷德·布莱克伍德被银柄拆信刀刺死，书房反锁且铁盒失踪，线索指向“15号仓库”。",
+  "opening_scene": "侦探受格雷森探长邀请抵达布莱克伍德庄园；二楼书房门被撞开，死者伏在书桌上，现场有撕碎纸片、窗沿脚印、异常纤维与失踪铁盒等线索。",
+  "current_arc": "密室谋杀调查",
+  "current_stage": "现场勘查与证词核对",
+  "objectives": {
+    "OBJ_SOLVE_MURDER": {
+      "objective_id": "OBJ_SOLVE_MURDER",
+      "title": "查明谁杀了布莱克伍德",
+      "summary": "通过现场物证与证词矛盾锁定真凶并还原作案方式。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_GRAYS0N",
+        "ACT_ISABELLA",
+        "ACT_SILAS",
+        "ACT_THORNE",
+        "ACT_LILY",
+        "ACT_ALFRED"
+      ],
+      "related_clue_ids": [
+        "CLUE_LETTER_OPENER",
+        "CLUE_PAPER_15_WAREHOUSE",
+        "CLUE_GREEN_FIBER",
+        "CLUE_WINDOW_FOOTPRINT",
+        "CLUE_MISSING_IRON_BOX",
+        "CLUE_GASLAMP_FINGERPRINT"
+      ],
+      "related_location_ids": [
+        "LOC_BLACKWOOD_MANOR_STUDY"
+      ]
+    },
+    "OBJ_FIND_IRON_BOX": {
+      "objective_id": "OBJ_FIND_IRON_BOX",
+      "title": "找到失踪的上锁铁盒",
+      "summary": "追查书桌抽屉中失踪铁盒的去向与内容。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_SILAS",
+        "ACT_THORNE"
+      ],
+      "related_clue_ids": [
+        "CLUE_MISSING_IRON_BOX",
+        "CLUE_PAPER_15_WAREHOUSE"
+      ],
+      "related_location_ids": [
+        "LOC_BLACKWOOD_MANOR_STUDY",
+        "LOC_GARDEN_TOOL_SHED"
+      ]
+    },
+    "OBJ_INVESTIGATE_WAREHOUSE_15": {
+      "objective_id": "OBJ_INVESTIGATE_WAREHOUSE_15",
+      "title": "调查码头15号仓库",
+      "summary": "核实“15号仓库”与走私/查封传闻及其与铁盒合同的关联。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_THORNE",
+        "ACT_GRAYS0N"
+      ],
+      "related_clue_ids": [
+        "CLUE_PAPER_15_WAREHOUSE"
+      ],
+      "related_location_ids": [
+        "LOC_DOCK_WAREHOUSE_15"
+      ]
+    },
+    "OBJ_VERIFY_ALIBIS": {
+      "objective_id": "OBJ_VERIFY_ALIBIS",
+      "title": "核对关键人物不在场证明",
+      "summary": "复核妻子、管家、索恩、莉莉的时间线与物证对应关系。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_ISABELLA",
+        "ACT_SILAS",
+        "ACT_THORNE",
+        "ACT_LILY"
+      ],
+      "related_clue_ids": [
+        "CLUE_CLOCK_DISCREPANCY",
+        "CLUE_GASLAMP_FINGERPRINT",
+        "CLUE_GREEN_FIBER",
+        "CLUE_WINDOW_FOOTPRINT"
+      ],
+      "related_location_ids": [
+        "LOC_SERVANTS_QUARTERS",
+        "LOC_KITCHEN",
+        "LOC_BLACKWOOD_MANOR_STUDY"
+      ]
+    }
+  },
+  "triggers": {
+    "TRG_LAB_FINGERPRINTS_LETTER_OPENER": {
+      "trigger_id": "TRG_LAB_FINGERPRINTS_LETTER_OPENER",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "将银柄拆信刀送去苏格兰场化验并等待4小时",
+      "effect_summary": "获得拆信刀指纹比对结果（可能排除/指向嫌疑人）",
+      "priority": 50
+    },
+    "TRG_WAREHOUSE_15_NEEDS_WARRANT": {
+      "trigger_id": "TRG_WAREHOUSE_15_NEEDS_WARRANT",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家试图进入15号仓库调查",
+      "effect_summary": "提示需申请搜查令；无令进入可能遭码头黑帮殴打",
+      "priority": 60
+    },
+    "TRG_LILY_OPENS_UP_WITH_FIBER": {
+      "trigger_id": "TRG_LILY_OPENS_UP_WITH_FIBER",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "出示与深绿色粗布相关的纤维/围裙证据并追问莉莉地图来源",
+      "effect_summary": "莉莉更可能交代讨薪与对庄园/仓库的了解",
+      "priority": 40
+    }
+  },
+  "secrets": {
+    "SEC_KILLER_IS_SILAS": {
+      "secret_id": "SEC_KILLER_IS_SILAS",
+      "title": "真凶是管家塞拉斯",
+      "summary": "为儿子病逝复仇，利用熟悉窗锁从窗入室行凶并伪造商业仇杀。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_SILAS"
+      ]
+    },
+    "SEC_WAREHOUSE_15_SMUGGLING": {
+      "secret_id": "SEC_WAREHOUSE_15_SMUGGLING",
+      "title": "15号仓库与走私劣质棉纱",
+      "summary": "布莱克伍德涉走私，仓库被查封；铁盒内合同为关键证据。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_SILAS",
+        "ACT_ALFRED"
+      ]
+    },
+    "SEC_CLOCK_TAMPER": {
+      "secret_id": "SEC_CLOCK_TAMPER",
+      "title": "佣人房时钟被动过手脚",
+      "summary": "佣人房挂钟快1小时，制造“凌晨2点发现尸体”的时间混淆。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_SILAS"
+      ]
+    },
+    "SEC_PLANTED_FIBER": {
+      "secret_id": "SEC_PLANTED_FIBER",
+      "title": "绿色纤维被栽赃",
+      "summary": "塞拉斯将莉莉围裙碎片塞入死者指甲缝以嫁祸。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_SILAS"
+      ]
+    },
+    "SEC_RING_IN_STUDY": {
+      "secret_id": "SEC_RING_IN_STUDY",
+      "title": "书房地毯角落的戒指刻着L·W",
+      "summary": "伊莎贝拉的戒指掉在书房，内刻“L·W”（指向莉莉·怀特）。",
+      "revealed": false,
+      "known_actor_ids": []
+    }
+  },
+  "world_facts": [
+    "时间地点：1887年10月伦敦汉普斯特德区布莱克伍德庄园",
+    "死者：阿尔弗雷德·布莱克伍德，52岁，棉纱商人，传闻濒临破产",
+    "死亡时间窗：10月17日22:00至24:00；管家称22:00见过他，01:00-02:00间尸体被发现",
+    "死亡地点：二楼书房；门从内部反锁，钥匙在死者口袋",
+    "凶器：银柄拆信刀（家族旧物，常放书桌左侧古董架）",
+    "死者右手握半张纸片，能辨“…15号仓库…货…”",
+    "死者指甲缝有深绿色粗纤维（与书房地毯/死者衣物不同）",
+    "书房窗从内扣死，但窗沿外侧有半个泥脚印（约43码），泥土与庄园外小巷一致",
+    "书桌抽屉现金未动，但上锁铁盒失踪（据称装商业合同）",
+    "煤气灯亮着，其中一盏灯罩有非死者指纹，灯芯显示中途被调暗过",
+    "关键人物：妻子伊莎贝拉、管家塞拉斯、商业对手索恩、缝纫女工莉莉；格雷森探长负责此案",
+    "风险：15号仓库区域为码头黑帮地盘，需搜查令"
+  ],
+  "unresolved_questions": [
+    "“15号仓库”纸片具体指向何种货物/交易？",
+    "失踪铁盒内合同内容是什么，谁想要它？",
+    "窗沿脚印与绿色纤维分别指向谁，是否为栽赃？",
+    "煤气灯被调暗的时间点与操作者是谁？",
+    "伊莎贝拉戒指为何会出现在书房（若被找到）？"
+  ],
+  "active_branch_flags": [
+    "FLAG_LOCKED_ROOM_APPEARANCE",
+    "FLAG_WAREHOUSE_15_LEAD",
+    "FLAG_IRON_BOX_MISSING"
+  ],
+  "foreshadow_queue": [
+    "佣人房挂钟时间可能不可靠（与其他钟表对照）",
+    "窗沿脚印与鞋码43的关联将指向特定靴子",
+    "绿色粗布纤维与莉莉围裙的表面吻合可能是嫁祸",
+    "煤气灯旋钮/灯罩指纹可与嫌疑人对应",
+    "花园工具房可能藏匿关键物（铁盒）"
+  ],
+  "ending_candidates": [
+    "证据链闭合，指证并逮捕塞拉斯，找回铁盒并还原密室手法",
+    "误判索恩或莉莉导致真凶逍遥（铁盒/走私证据去向成谜）",
+    "在15号仓库调查时与码头势力冲突，被迫撤退或延误关键证据"
+  ],
+  "fail_state": "若未能及时取得搜查令或保护证据，15号仓库/铁盒相关证据可能被转移或调查受阻。"
+}

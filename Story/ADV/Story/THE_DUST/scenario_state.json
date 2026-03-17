@@ -1,0 +1,248 @@
+{
+  "title": "《黑砂遗迹》（黑砂古城）",
+  "brief": "单人进入沙漠遗迹追踪盗掘者；沙暴60分钟后掩埋遗迹。需用区域临时能力解机关，避开流沙与盗掘者，并在“献祭核心”处做抉择。",
+  "opening_scene": "玩家追踪车辙到黑砂古城入口，被守陵人后裔阿吉拦下并警告；盗掘者已入内30分钟且带炸药。阿吉交出半块青铜风标并提醒“别信眼睛看到的”。",
+  "current_arc": "进入遗迹与追踪盗掘者",
+  "current_stage": "入口/前厅起步",
+  "objectives": {
+    "OBJ_SURVIVE_STORM": {
+      "objective_id": "OBJ_SURVIVE_STORM",
+      "title": "在沙暴前离开遗迹",
+      "summary": "沙漏漏完前（60分钟）必须离开，否则被流沙掩埋。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "NPC_AJI",
+        "FACTION_RAIDERS_3"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "LOC_BLACKSAND_CITY"
+      ]
+    },
+    "OBJ_STOP_RAIDERS": {
+      "objective_id": "OBJ_STOP_RAIDERS",
+      "title": "阻止盗掘者获取献祭核心",
+      "summary": "盗掘者目标为地宫“献祭核心”，并用错误标记误导后来者。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "FACTION_RAIDERS_3"
+      ],
+      "related_clue_ids": [
+        "CLUE_RAIDER_FALSE_MARKS",
+        "CLUE_RADIO_CHATTER"
+      ],
+      "related_location_ids": [
+        "LOC_MAIN_HALL_DOME",
+        "LOC_UNDERGROUND_SACRIFICE"
+      ]
+    },
+    "OBJ_SOLVE_FOYER_PUZZLE": {
+      "objective_id": "OBJ_SOLVE_FOYER_PUZZLE",
+      "title": "解开前厅风沙回廊机关",
+      "summary": "拼合青铜风标并按气流规律移动，找到通往主殿的暗门开关。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "NPC_AJI"
+      ],
+      "related_clue_ids": [
+        "CLUE_WIND_ALTAR_INSCRIPTION",
+        "CLUE_BRONZE_WIND_VANE_HALF"
+      ],
+      "related_location_ids": [
+        "LOC_FOYER_CORRIDOR"
+      ]
+    },
+    "OBJ_SOLVE_STAR_DOME": {
+      "objective_id": "OBJ_SOLVE_STAR_DOME",
+      "title": "解开主殿星象穹顶星盘",
+      "summary": "用星影/星图连线匹配正确凹槽，转动星盘开启侧室阶梯。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "FACTION_RAIDERS_3",
+        "NPC_AJI"
+      ],
+      "related_clue_ids": [
+        "CLUE_DOME_STAR_SHADOW",
+        "CLUE_RAIDER_STAR_NOTES"
+      ],
+      "related_location_ids": [
+        "LOC_MAIN_HALL_DOME"
+      ]
+    },
+    "OBJ_SOLVE_SIDE_ROOM": {
+      "objective_id": "OBJ_SOLVE_SIDE_ROOM",
+      "title": "解开侧室石纹密室并取得地宫钥匙",
+      "summary": "在流沙下陷压力下按“三横两竖”顺序按压石块，露出木板并拿到钥匙。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "FACTION_RAIDERS_3"
+      ],
+      "related_clue_ids": [
+        "CLUE_CRAFTSMAN_DIARY",
+        "CLUE_STONE_WEAR_MARKS"
+      ],
+      "related_location_ids": [
+        "LOC_SIDE_ROOM_PATTERN"
+      ]
+    },
+    "OBJ_OPEN_UNDERGROUND": {
+      "objective_id": "OBJ_OPEN_UNDERGROUND",
+      "title": "进入地宫并处理炸药威胁",
+      "summary": "用钥匙开门，面对盗掘者老三贴炸药与持枪威胁。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "FACTION_RAIDERS_3"
+      ],
+      "related_clue_ids": [
+        "CLUE_OATH_SCROLL_SOUND_OPENS"
+      ],
+      "related_location_ids": [
+        "LOC_UNDERGROUND_SACRIFICE"
+      ]
+    },
+    "OBJ_CORE_CHOICE": {
+      "objective_id": "OBJ_CORE_CHOICE",
+      "title": "对献祭核心做出抉择",
+      "summary": "核心暴露后，选择交给阿吉守护或用军刀摧毁。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "NPC_AJI"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "LOC_UNDERGROUND_SACRIFICE"
+      ]
+    }
+  },
+  "triggers": {
+    "TRG_STORM_TIMER_START": {
+      "trigger_id": "TRG_STORM_TIMER_START",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家进入遗迹（开场）",
+      "effect_summary": "启动60分钟沙暴倒计时；每15分钟穹顶阳光变暗提示时间流逝",
+      "priority": 90
+    },
+    "TRG_FOYER_PUZZLE_START": {
+      "trigger_id": "TRG_FOYER_PUZZLE_START",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "两半青铜风标拼合",
+      "effect_summary": "风标自动指向气流最稳定孔洞；引导前厅解谜",
+      "priority": 80
+    },
+    "TRG_MAIN_HALL_RAIDER_RADIO": {
+      "trigger_id": "TRG_MAIN_HALL_RAIDER_RADIO",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家在主殿停留超过10分钟",
+      "effect_summary": "听到对讲机杂音，暴露盗掘者分布：老二侧室、老三守地宫入口、老大在主殿补标记",
+      "priority": 70
+    },
+    "TRG_SIDE_ROOM_SAND_MISSTEP": {
+      "trigger_id": "TRG_SIDE_ROOM_SAND_MISSTEP",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "侧室踩错流沙区域/触发流沙",
+      "effect_summary": "盗掘者呼喊并在5分钟内赶到侧室；同时每按错一次流沙加深并更易引发追兵",
+      "priority": 75
+    },
+    "TRG_ABILITY_OVERLOAD_HALLUCINATION": {
+      "trigger_id": "TRG_ABILITY_OVERLOAD_HALLUCINATION",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "同一区域临时能力使用超过3次",
+      "effect_summary": "出现幻象干扰；需闭眼深呼吸10秒破除",
+      "priority": 60
+    },
+    "TRG_UNDERGROUND_CRYSTAL_AMPLIFY": {
+      "trigger_id": "TRG_UNDERGROUND_CRYSTAL_AMPLIFY",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入地宫且接触/靠近黑色结晶环境",
+      "effect_summary": "放大能力代价（声纹解析后耳鸣伴短暂失聪，难以听盗掘者动静）",
+      "priority": 65
+    },
+    "TRG_UNDERGROUND_FAIL_EXPLOSION": {
+      "trigger_id": "TRG_UNDERGROUND_FAIL_EXPLOSION",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "地宫声纹机关失败/未按节奏触发",
+      "effect_summary": "炸药爆炸、地宫坍塌，强制进入摧毁结局走向",
+      "priority": 95
+    },
+    "TRG_SIDE_ROOM_STRUCTURAL_SHAKE": {
+      "trigger_id": "TRG_SIDE_ROOM_STRUCTURAL_SHAKE",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "侧室流沙区域每踩错1次",
+      "effect_summary": "石墙震动并掉落碎石，可能造成行动迟缓",
+      "priority": 55
+    }
+  },
+  "secrets": {
+    "SEC_AJI_OATH_WITHHOLD": {
+      "secret_id": "SEC_AJI_OATH_WITHHOLD",
+      "title": "阿吉因家族誓言隐瞒关键信息",
+      "summary": "阿吉掌握遗迹传说与誓约内容，但会选择性提示而非全盘告知。",
+      "revealed": false,
+      "known_actor_ids": [
+        "NPC_AJI"
+      ]
+    },
+    "SEC_RAIDER_FALSE_GUIDE": {
+      "secret_id": "SEC_RAIDER_FALSE_GUIDE",
+      "title": "盗掘者故意留下错误星位标记",
+      "summary": "主殿星盘与笔记中的红漆/连线用于误导后来者，需交叉验证。",
+      "revealed": false,
+      "known_actor_ids": [
+        "FACTION_RAIDERS_3"
+      ]
+    }
+  },
+  "world_facts": [
+    "黑砂古城为四进结构遗迹：前厅风沙回廊、主殿星象穹顶、侧室石纹密室、地宫献祭暗室。",
+    "遗迹存在流沙陷阱与古老机关；穹顶漏光可作为时间与解谜要素。",
+    "沙暴将在游戏内60分钟后抵达并以约3米流沙掩埋遗迹。",
+    "每个区域会触发一种仅限该区域使用的临时能力，且有明确生理代价；离开区域能力消失。",
+    "盗掘者为3人小队，携带铁锹、对讲机，目标为地宫“献祭核心”，并带炸药。",
+    "地宫黑色结晶会放大能力代价。",
+    "玩家初始资源：1壶水（3次）、手电筒（40分钟；地宫必须用）、多功能军刀。",
+    "阿吉为守陵人后裔，携带刻有遗迹地图的青铜短刀；祖父曾因阻止盗掘者被杀。"
+  ],
+  "unresolved_questions": [
+    "献祭核心是否真能“操控沙暴”，以及其运作原理是什么？",
+    "阿吉具体隐瞒了哪些关于遗迹/核心的关键信息？"
+  ],
+  "active_branch_flags": [
+    "FLAG_STORM_COUNTDOWN_ACTIVE",
+    "FLAG_RAIDERS_ACTIVE",
+    "FLAG_AJI_COMPANION_PRESENT"
+  ],
+  "foreshadow_queue": [
+    "阿吉警告“别信眼睛看到的”（对应能量紊乱/误导标记/需用影子解星盘）。",
+    "开场提到盗掘者带炸药（对应地宫炸药冲突与失败爆炸）。",
+    "阿吉提示“星图不是看形状，是看影子——中午的太阳会帮你”（对应主殿正午发光验证）。",
+    "能力代价累积与“沙蚀状态量表”（对应水耗尽、耳鸣失聪、暴露位置等风险升级）。"
+  ],
+  "ending_candidates": [
+    "守护结局：将献祭核心交给阿吉刻印守护，流沙退去，盗掘者被沙暴困住，玩家离开。",
+    "摧毁结局：用军刀砸碎核心引发坍塌；玩家从应急通道爬出，阿吉被流沙掩埋并留下指责。"
+  ],
+  "fail_state": "沙暴到达或地宫炸药爆炸/坍塌导致被流沙掩埋（或被迫走向摧毁结局）。"
+}

@@ -5,6 +5,29 @@ from typing import Any
 from .models import DeltaOperation, GameMeta, GameState
 
 
+LEGACY_ROOT_MAP = {
+    "meta": "core.meta",
+    "player": "core.player",
+    "scene": "core.scene",
+    "npcs": "core.npcs",
+    "recent_events": "core.recent_events",
+    "chapter_summary": "core.chapter_summary",
+    "director": "agent_runtime.director",
+    "scenario_title": "scenario.title",
+    "scenario_brief": "scenario.brief",
+}
+
+
+def _normalize_delta_path(path: str) -> str:
+    if not path:
+        return path
+    root, *rest = path.split(".")
+    mapped_root = LEGACY_ROOT_MAP.get(root, root)
+    if not rest:
+        return mapped_root
+    return ".".join([mapped_root, *rest])
+
+
 def _resolve_parent(container: dict[str, Any], path: str) -> tuple[dict[str, Any], str]:
     parts = path.split(".")
     current = container
@@ -21,7 +44,8 @@ def apply_delta(state: GameState, delta: list[DeltaOperation]) -> GameState:
     working = state.model_dump(mode="python")
 
     for operation in delta:
-        parent, leaf = _resolve_parent(working, operation.path)
+        normalized_path = _normalize_delta_path(operation.path)
+        parent, leaf = _resolve_parent(working, normalized_path)
 
         if operation.op == "set":
             parent[leaf] = operation.value
@@ -56,6 +80,7 @@ def advance_clock(meta: GameMeta, minutes: int) -> GameMeta:
             "game_day": meta.game_day + extra_days,
             "game_hour": hour,
             "game_minute": minute,
+            "elapsed_minutes": meta.elapsed_minutes + minutes,
         }
     )
 
@@ -75,20 +100,19 @@ def append_recent_events(
         return state
 
     payload = state.model_dump(mode="python")
-    payload["recent_events"].extend(entry for entry in entries if entry)
+    payload["core"]["recent_events"].extend(entry for entry in entries if entry)
 
-    if len(payload["recent_events"]) > max_recent_events:
-        overflow = payload["recent_events"][:-max_recent_events]
-        payload["recent_events"] = payload["recent_events"][-max_recent_events:]
-        merged = payload.get("chapter_summary", "").strip()
-        overflow_text = "；".join(overflow)
+    if len(payload["core"]["recent_events"]) > max_recent_events:
+        overflow = payload["core"]["recent_events"][:-max_recent_events]
+        payload["core"]["recent_events"] = payload["core"]["recent_events"][-max_recent_events:]
+        merged = payload["core"].get("chapter_summary", "").strip()
+        overflow_text = " | ".join(overflow)
         if merged:
-            merged = f"{merged}\n归档事件：{overflow_text}"
+            merged = f"{merged}\nArchived events: {overflow_text}"
         else:
-            merged = f"归档事件：{overflow_text}"
+            merged = f"Archived events: {overflow_text}"
         if len(merged) > max_summary_chars:
             merged = merged[-max_summary_chars:]
-        payload["chapter_summary"] = merged
+        payload["core"]["chapter_summary"] = merged
 
     return GameState.model_validate(payload)
-
