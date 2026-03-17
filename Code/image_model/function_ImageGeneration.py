@@ -23,8 +23,8 @@ for path in (CODE_DIR, IMAGE_MODEL_DIR):
         sys.path.insert(0, str(path))
 
 import data.data_Path as data_path
-from tools.function_Preference import PreferenceManager
-from user_info.option_Imagemodel import ImageModelConfig, ImageModelRegistry
+from tools.function_Preference import load_merged_preferences
+from user_info.option_imagemodel import ImageModelConfig, ImageModelRegistry
 
 try:
     from .provider_GeminiImage import _call_gemini, _extract_image
@@ -156,11 +156,15 @@ def get_selected_image_model_code(
     preference_path: str | Path | None = None,
 ) -> str:
     pref_file = _resolve_code_path(data_path.PATH_DATA_PREFERENCE)
+    default_pref_file = _resolve_code_path(data_path.PATH_DATA_DEFAULT_PREFERENCE)
     if preference_path is not None:
         pref_file = Path(preference_path)
 
-    manager = PreferenceManager(path=str(pref_file))
-    image_model_pref = manager.get("image_model", {})
+    prefs = load_merged_preferences(
+        init_path=str(default_pref_file),
+        path=str(pref_file),
+    )
+    image_model_pref = prefs.get("image_model", {})
     if not isinstance(image_model_pref, dict):
         raise TypeError("Preference 'image_model' must be a dict")
 

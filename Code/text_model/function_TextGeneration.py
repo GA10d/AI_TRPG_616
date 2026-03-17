@@ -16,8 +16,8 @@ from typing import Dict, Iterable, Iterator, Optional, Sequence
 from pydantic import BaseModel
 
 import data.data_Path as data_path
-from tools.function_Preference import PreferenceManager
-from user_info.option_TextModel import ModelConfig, ModelRegistry
+from tools.function_Preference import load_merged_preferences
+from user_info.option_textmodel import ModelConfig, ModelRegistry
 
 try:
     from .provider_OpenAICompatibleText import (
@@ -62,11 +62,15 @@ def get_selected_text_model_code(
     preference_path: str | Path | None = None,
 ) -> str:
     pref_file = _resolve_code_path(data_path.PATH_DATA_PREFERENCE)
+    default_pref_file = _resolve_code_path(data_path.PATH_DATA_DEFAULT_PREFERENCE)
     if preference_path is not None:
         pref_file = Path(preference_path)
 
-    manager = PreferenceManager(path=str(pref_file))
-    text_model_pref = manager.get("text_model", {})
+    prefs = load_merged_preferences(
+        init_path=str(default_pref_file),
+        path=str(pref_file),
+    )
+    text_model_pref = prefs.get("text_model", {})
     if not isinstance(text_model_pref, dict):
         raise TypeError("Preference 'text_model' must be a dict")
 
@@ -132,6 +136,7 @@ def _get_adapter(model_config: ModelConfig) -> ProviderAdapter:
 def get_normal_reply(
     *,
     input: Sequence[Message],
+    feature: Optional[str] = None,
     preference_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     temperature: float = 0.7,
@@ -141,6 +146,7 @@ def get_normal_reply(
 ) -> str:
     request = _build_request(
         input=input,
+        feature=feature,
         preference_path=preference_path,
         registry_path=registry_path,
         temperature=temperature,
@@ -154,6 +160,7 @@ def get_normal_reply(
 def get_stream_reply(
     *,
     input: Sequence[Message],
+    feature: Optional[str] = None,
     preference_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     temperature: float = 0.7,
@@ -163,6 +170,7 @@ def get_stream_reply(
 ) -> Iterator[str]:
     request = _build_request(
         input=input,
+        feature=feature,
         preference_path=preference_path,
         registry_path=registry_path,
         temperature=temperature,
@@ -177,6 +185,7 @@ def get_reply(
     *,
     is_stream: bool = True,
     input: Sequence[Message],
+    feature: Optional[str] = None,
     preference_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     temperature: float = 0.7,
@@ -191,6 +200,7 @@ def get_reply(
     if is_stream:
         return get_stream_reply(
             input=input,
+            feature=feature,
             preference_path=preference_path,
             registry_path=registry_path,
             temperature=temperature,
@@ -201,6 +211,7 @@ def get_reply(
 
     return get_normal_reply(
         input=input,
+        feature=feature,
         preference_path=preference_path,
         registry_path=registry_path,
         temperature=temperature,

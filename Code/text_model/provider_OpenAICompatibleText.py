@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
 
-from user_info.option_TextModel import ModelConfig
+from user_info.option_textmodel import ModelConfig
 
 
 Message = Dict[str, str]
