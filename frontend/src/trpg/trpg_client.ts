@@ -9,8 +9,24 @@ export interface RuleOption {
   stories: StoryOption[];
 }
 
+export interface LanguageOption {
+  id: number;
+  code: string;
+  label: string;
+  native_label: string;
+  prompt_localized: boolean;
+}
+
 export interface CatalogResponse {
   rules: RuleOption[];
+  languages: LanguageOption[];
+}
+
+export interface LanguagePackResponse {
+  requested_code: string;
+  effective_code: string;
+  prompt_localized: boolean;
+  ui: Record<string, string>;
 }
 
 export interface SessionStateSummary {
@@ -55,6 +71,7 @@ export interface SessionResponse {
   rule_code: string;
   story_code: string;
   player_name: string;
+  language_code: string;
   max_turns: number;
   turns_used: number;
   turns_remaining: number;
@@ -131,12 +148,17 @@ export interface StreamSessionReadyEvent {
   session: SessionResponse;
 }
 
-export type StreamSessionEvent = StreamSessionLogEvent | StreamSessionReadyEvent | StreamTurnErrorEvent;
+export type StreamSessionEvent =
+  | StreamSessionLogEvent
+  | StreamSessionReadyEvent
+  | StreamTurnAgentEvent
+  | StreamTurnErrorEvent;
 
 export interface CreateSessionRequest {
   rule_code: string;
   story_code: string;
   player_name: string;
+  language_code: string;
   max_turns: number;
 }
 
@@ -170,6 +192,10 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function fetchCatalog(): Promise<CatalogResponse> {
   return requestJson<CatalogResponse>("/api/trpg/catalog");
+}
+
+export function fetchLanguagePack(code: string): Promise<LanguagePackResponse> {
+  return requestJson<LanguagePackResponse>(`/api/trpg/language/${encodeURIComponent(code)}`);
 }
 
 export function createSession(payload: CreateSessionRequest): Promise<SessionResponse> {
@@ -212,17 +238,13 @@ export async function streamCreateSession(
       while (lineBreak >= 0) {
         const line = buffer.slice(0, lineBreak).trim();
         buffer = buffer.slice(lineBreak + 1);
-        if (line) {
-          onEvent(JSON.parse(line) as StreamSessionEvent);
-        }
+        if (line) onEvent(JSON.parse(line) as StreamSessionEvent);
         lineBreak = buffer.indexOf("\n");
       }
     }
 
     const tail = buffer.trim();
-    if (tail) {
-      onEvent(JSON.parse(tail) as StreamSessionEvent);
-    }
+    if (tail) onEvent(JSON.parse(tail) as StreamSessionEvent);
   } finally {
     reader.releaseLock();
   }
@@ -269,17 +291,13 @@ export async function streamTurn(
       while (lineBreak >= 0) {
         const line = buffer.slice(0, lineBreak).trim();
         buffer = buffer.slice(lineBreak + 1);
-        if (line) {
-          onEvent(JSON.parse(line) as StreamTurnEvent);
-        }
+        if (line) onEvent(JSON.parse(line) as StreamTurnEvent);
         lineBreak = buffer.indexOf("\n");
       }
     }
 
     const tail = buffer.trim();
-    if (tail) {
-      onEvent(JSON.parse(tail) as StreamTurnEvent);
-    }
+    if (tail) onEvent(JSON.parse(tail) as StreamTurnEvent);
   } finally {
     reader.releaseLock();
   }
@@ -315,7 +333,7 @@ export async function exportHistory(sessionId: string): Promise<{ blob: Blob; fi
     throw new Error(data.error ?? `HTTP ${response.status}`);
   }
   const disposition = response.headers.get("Content-Disposition") ?? "";
-  const match = disposition.match(/filename=\"?([^"]+)\"?/i);
+  const match = disposition.match(/filename=\"?([^\"]+)\"?/i);
   return {
     blob: await response.blob(),
     fileName: match?.[1] ?? `trpg_history_${sessionId}.txt`,

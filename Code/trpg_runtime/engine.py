@@ -6,10 +6,21 @@ import threading
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Callable, Iterator, Sequence
 
+import data.data_Path as data_path
 from text_model.function_TextGeneration import Message, get_normal_reply, get_stream_reply
+from tools.function_Preference import load_merged_preferences
 
+from .language_support import (
+    build_output_language_instruction,
+    get_localized_agent_note,
+    get_narrator_language_note,
+    get_opening_language_note,
+    normalize_language_code,
+)
 from .models import (
     AgentRuntimeState,
     ConversationTurnRecord,
@@ -53,6 +64,20 @@ ACTION_PATTERNS: list[tuple[str, Sequence[str]]] = [
 TARGET_PATTERN = re.compile(
     r"(?:观察|查看|检查|调查|搜索|探索|询问|攻击|进入|前往|使用|打开|靠近)([^，。；,.]{1,18})"
 )
+
+MARKDOWN_HEADING_PREFIX = re.compile(r"^\s{0,3}#{2,6}\s*")
+MARKDOWN_BOLD_TOKEN = re.compile(r"\*\*")
+HEADING_NUMBER_PREFIX = re.compile(r"^(?:NPC\d+|[一二三四五六七八九十]+|\d+)[\.、:\s-]*")
+NPC_SECTION_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"^([^：:]{1,16})[：:]\s*([^\(（]{1,24})(?:[\(（](.+?)[\)）])?$"),
+    re.compile(r"^(?:\d+[\.\s、]*)?([^\(（]{2,24})(?:[\(（](.+?)[\)）])?$"),
+]
+VISIBLE_NPC_TITLE_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"([\u4e00-\u9fffA-Za-z·]{2,12}探长)"),
+    re.compile(r"([\u4e00-\u9fffA-Za-z·]{2,12}村长)"),
+    re.compile(r"([\u4e00-\u9fffA-Za-z·]{2,12}管家)"),
+    re.compile(r"([\u4e00-\u9fffA-Za-z·]{2,12}僧人)"),
+]
 
 
 @dataclass(frozen=True)
@@ -121,6 +146,258 @@ def parse_player_action(player_text: str) -> ParsedPlayerAction:
     )
 
 
+CODE_ROOT = Path(__file__).resolve().parents[1]
+ACTION_TARGET_STOP_CHARS = "，。；,.！？!?\n\r\t"
+ACTION_TARGET_MAX_LEN = 32
+
+
+def _resolve_code_path(path_str: str) -> Path:
+    return CODE_ROOT / Path(path_str)
+
+
+def _normalize_language_code(code: str | None) -> str:
+    if not code:
+        return ""
+    return code.strip().casefold()
+
+
+@lru_cache(maxsize=4)
+def _load_action_parser_data(config_path: str | None = None) -> dict[str, object]:
+    config_file = _resolve_code_path(data_path.PATH_DATA_ACTION_PARSER)
+    if config_path:
+        config_file = Path(config_path)
+    payload = json.loads(config_file.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TypeError("Action parser config root must be a dict")
+    return payload
+
+
+def _get_preferred_language_code() -> str:
+    pref_file = _resolve_code_path(data_path.PATH_DATA_PREFERENCE)
+    default_pref_file = _resolve_code_path(data_path.PATH_DATA_DEFAULT_PREFERENCE)
+    prefs = load_merged_preferences(
+        init_path=str(default_pref_file),
+        path=str(pref_file),
+    )
+    language = prefs.get("language", "")
+    return str(language).strip() if language else ""
+
+
+def _normalize_keyword_list(raw: object) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    values: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        normalized = item.strip()
+        if normalized:
+            values.append(normalized)
+    return values
+
+
+def _build_language_lookup(payload: dict[str, object]) -> tuple[str, dict[str, dict[str, object]]]:
+    default_language = _normalize_language_code(str(payload.get("default_language", "zh-CN")))
+    raw_languages = payload.get("languages", {})
+    if not isinstance(raw_languages, dict) or not raw_languages:
+        raise TypeError("Action parser config languages must be a non-empty dict")
+
+    languages: dict[str, dict[str, object]] = {}
+    for raw_code, raw_config in raw_languages.items():
+        if isinstance(raw_config, dict):
+            languages[_normalize_language_code(str(raw_code))] = raw_config
+    if not languages:
+        raise TypeError("Action parser config languages must contain object values")
+    return default_language, languages
+
+
+def _resolve_language_variants(language_code: str, available_codes: set[str], default_code: str) -> list[str]:
+    variants: list[str] = []
+    normalized = _normalize_language_code(language_code)
+    if normalized:
+        variants.append(normalized)
+        base = normalized.split("-", 1)[0]
+        if base != normalized:
+            variants.append(base)
+
+    variants.extend(["zh-cn", "zh", default_code])
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for candidate in variants:
+        if candidate in seen or candidate not in available_codes:
+            continue
+        seen.add(candidate)
+        deduped.append(candidate)
+    return deduped
+
+
+def _get_action_parser_config(
+    *,
+    config_path: str | None = None,
+    language_code: str | None = None,
+) -> dict[str, object]:
+    payload = _load_action_parser_data(config_path)
+    default_language, languages = _build_language_lookup(payload)
+    preferred_language = language_code or _get_preferred_language_code()
+    selected_codes = _resolve_language_variants(preferred_language, set(languages.keys()), default_language)
+
+    intents: list[tuple[str, list[str]]] = []
+    target_verbs: list[str] = []
+    tags: dict[str, list[str]] = {}
+
+    for code in selected_codes:
+        config = languages.get(code, {})
+        raw_intents = config.get("intents", {})
+        if isinstance(raw_intents, dict):
+            for intent_name, keywords in raw_intents.items():
+                normalized_keywords = _normalize_keyword_list(keywords)
+                if normalized_keywords:
+                    intents.append((str(intent_name), normalized_keywords))
+
+        target_verbs.extend(_normalize_keyword_list(config.get("target_verbs", [])))
+
+        raw_tags = config.get("tags", {})
+        if isinstance(raw_tags, dict):
+            for tag_name, keywords in raw_tags.items():
+                tags.setdefault(str(tag_name), []).extend(_normalize_keyword_list(keywords))
+
+    return {
+        "intents": intents,
+        "target_verbs": list(dict.fromkeys(target_verbs)),
+        "tags": {
+            tag_name: list(dict.fromkeys(values))
+            for tag_name, values in tags.items()
+        },
+    }
+
+
+def _contains_keyword(text: str, lowered_text: str, keyword: str) -> bool:
+    if not keyword:
+        return False
+    if keyword.isascii():
+        return keyword.casefold() in lowered_text
+    return keyword in text
+
+
+def _extract_action_target(
+    text: str,
+    *,
+    lowered_normalized: str,
+    target_verbs: Sequence[str],
+) -> str | None:
+    match_index = None
+    match_verb = ""
+    for verb in target_verbs:
+        haystack = lowered_normalized if verb.isascii() else text
+        needle = verb.casefold() if verb.isascii() else verb
+        start_index = haystack.find(needle)
+        if start_index == -1:
+            continue
+        if match_index is None or start_index < match_index or (
+            start_index == match_index and len(verb) > len(match_verb)
+        ):
+            match_index = start_index
+            match_verb = verb
+
+    if match_index is None:
+        return None
+
+    after_target = _extract_target_after_verb(text, match_index + len(match_verb))
+    if after_target:
+        return after_target
+
+    before_target = _extract_target_before_verb(text, match_index)
+    if before_target:
+        return before_target
+    return None
+
+
+def _extract_target_after_verb(text: str, start_index: int) -> str | None:
+    remainder = text[start_index:].lstrip(" ：:，,")
+    if not remainder:
+        return None
+
+    chars: list[str] = []
+    for char in remainder:
+        if char in ACTION_TARGET_STOP_CHARS:
+            break
+        chars.append(char)
+        if len(chars) >= ACTION_TARGET_MAX_LEN:
+            break
+
+    target = "".join(chars).strip()
+    return target or None
+
+
+def _extract_target_before_verb(text: str, verb_index: int) -> str | None:
+    if verb_index <= 0:
+        return None
+
+    segment = text[max(0, verb_index - ACTION_TARGET_MAX_LEN):verb_index]
+    for separator in ("。", "！", "？", ".", "!", "?", "，", ",", "然后", "并且", "并", "and "):
+        if separator in segment:
+            segment = segment.split(separator)[-1]
+
+    target = segment.strip(" ：:，,。；;!！？")
+    for suffix in ("を", "へ", "に", "が", "の", "里", "上", "下"):
+        if target.endswith(suffix) and len(target) > len(suffix):
+            target = target[: -len(suffix)].strip()
+            break
+    for prefix in ("我想", "我先", "我", "先", "想要", "想", "まず", "私は", "ぼくは", "俺は", "I ", "I softly "):
+        if target.startswith(prefix):
+            target = target[len(prefix):].strip()
+
+    return target or None
+
+
+def parse_player_action(
+    player_text: str,
+    *,
+    config_path: str | None = None,
+    language_code: str | None = None,
+) -> ParsedPlayerAction:
+    normalized = " ".join(player_text.split())
+    lowered_normalized = normalized.casefold()
+    parser_config = _get_action_parser_config(
+        config_path=config_path,
+        language_code=language_code,
+    )
+
+    intent = "general"
+    for candidate_intent, keywords in parser_config["intents"]:
+        if any(_contains_keyword(normalized, lowered_normalized, keyword) for keyword in keywords):
+            intent = candidate_intent
+            break
+
+    target = _extract_action_target(
+        normalized,
+        lowered_normalized=lowered_normalized,
+        target_verbs=parser_config["target_verbs"],
+    )
+
+    tags: list[str] = []
+    for tag_name, keywords in parser_config["tags"].items():
+        if any(_contains_keyword(normalized, lowered_normalized, keyword) for keyword in keywords):
+            tags.append(tag_name)
+
+    approach = None
+    if "quiet" in tags:
+        approach = "stealthy"
+    elif "rush" in tags:
+        approach = "aggressive"
+    elif "social" in tags:
+        approach = "social"
+
+    return ParsedPlayerAction(
+        raw_text=normalized,
+        intent=intent,
+        target=target,
+        approach=approach,
+        tags=tags,
+    )
+
+
 def _build_initial_npc_registry(
     *,
     visible_npcs: list[str] | None,
@@ -165,6 +442,45 @@ def _apply_state_overrides(state: GameState, overrides: dict[str, object] | None
     payload = state.model_dump(mode="python")
     merged = _merge_nested_dicts(payload, overrides)
     return GameState.model_validate(merged)
+
+
+def _normalize_initial_state(state: GameState) -> GameState:
+    scene_visible_names = [name.strip() for name in state.scene.visible_npcs if name and name.strip()]
+    deduped_visible_names = list(dict.fromkeys(scene_visible_names))
+    registry = dict(state.npcs)
+
+    for npc_name, npc_state in list(registry.items()):
+        if npc_state.is_visible and npc_name not in deduped_visible_names:
+            deduped_visible_names.append(npc_name)
+
+    for npc_name in deduped_visible_names:
+        npc_state = registry.get(npc_name)
+        if npc_state is None:
+            registry[npc_name] = NpcState(
+                name=npc_name,
+                location=state.scene.location,
+                location_id=state.scene.location_id,
+                is_visible=True,
+            )
+            continue
+        registry[npc_name] = npc_state.model_copy(
+            update={
+                "is_visible": True,
+                "location": npc_state.location or state.scene.location,
+                "location_id": npc_state.location_id or state.scene.location_id,
+            }
+        )
+
+    return state.model_copy(
+        update={
+            "core": state.core.model_copy(
+                update={
+                    "scene": state.scene.model_copy(update={"visible_npcs": deduped_visible_names}),
+                    "npcs": registry,
+                }
+            )
+        }
+    )
 
 
 def create_initial_state(
@@ -235,7 +551,7 @@ def create_initial_state(
         ),
         agent_runtime=AgentRuntimeState(director=DirectorState()),
     )
-    return _apply_state_overrides(initial_state, state_overrides)
+    return _normalize_initial_state(_apply_state_overrides(initial_state, state_overrides))
 
 
 class MinimalTRPGEngine:
@@ -248,19 +564,224 @@ class MinimalTRPGEngine:
         preference_path: str | None = None,
         registry_path: str | None = None,
         options: RuntimeOptions = RuntimeOptions(),
+        language_code: str = "zh-CN",
     ) -> None:
         self.scenario = scenario
-        self.state = state
+        self.state = self._seed_story_npcs_into_state(state)
         self.prompt_repository = prompt_repository or PromptRepository()
         self.preference_path = preference_path
         self.registry_path = registry_path
         self.options = options
+        self.language_code = normalize_language_code(language_code)
         self._state_lock = threading.RLock()
         self._executor = ThreadPoolExecutor(max_workers=self.options.max_parallel_workers)
         self._pending_director_future: Future[tuple[dict[str, object], DirectorOutput, int]] | None = None
         self._last_director_context: dict[str, object] | None = None
         self._last_director_result: DirectorOutput | None = None
         self._unread_director_result: DirectorOutput | None = None
+        self._opening_npc_result: NPCManagerOutput | None = None
+        self._opening_npc_initialized = False
+
+    @staticmethod
+    def _clean_heading_text(line: str) -> str:
+        text = MARKDOWN_HEADING_PREFIX.sub("", line).strip()
+        text = MARKDOWN_BOLD_TOKEN.sub("", text).strip()
+        return HEADING_NUMBER_PREFIX.sub("", text).strip()
+
+    @staticmethod
+    def _build_story_npc_payload(name: str, *, identity: str = "", detail: str = "", role_hint: str = "") -> dict[str, object]:
+        description_parts = [part for part in (identity, detail) if part]
+        return {
+            "name": name,
+            "identity": identity or role_hint,
+            "description": "；".join(description_parts)[:220],
+            "location": "",
+            "current_goal": "",
+            "task_summary": "",
+            "last_public_status": "",
+            "is_visible": False,
+            "tags": ["story_seeded"],
+        }
+
+    def _extract_story_npc_candidates(self) -> dict[str, dict[str, object]]:
+        candidates: dict[str, dict[str, object]] = {}
+        lines = self.scenario.story_text.splitlines()
+        in_npc_section = False
+
+        for index, raw_line in enumerate(lines):
+            stripped_line = raw_line.strip()
+            cleaned = self._clean_heading_text(raw_line)
+            if not cleaned:
+                continue
+
+            if any(token in stripped_line for token in ("关键NPC", "NPC 卡", "NPC Sheets", "NPC伙伴")):
+                in_npc_section = True
+            elif in_npc_section and re.match(r"^\s{0,3}##(?!#)", stripped_line) and not any(
+                token in stripped_line for token in ("NPC", "关键NPC", "NPC伙伴")
+            ):
+                in_npc_section = False
+
+            if not in_npc_section and "NPC伙伴" not in stripped_line:
+                continue
+            if not stripped_line.startswith("#"):
+                continue
+            if cleaned.startswith("P") and len(cleaned) > 1 and cleaned[1].isdigit():
+                continue
+            if any(token in cleaned for token in ("NPC 卡", "NPC Sheets")) and "NPC伙伴" not in cleaned:
+                continue
+            if "NPC伙伴" not in cleaned and not any(token in cleaned for token in ("：", ":", "（", "(")):
+                continue
+
+            parsed_name = ""
+            identity = ""
+            if "NPC伙伴" in cleaned:
+                combined = cleaned.split("：", 1)[-1].split(":", 1)[-1].strip()
+                suffix_match = re.search(r"([\u4e00-\u9fff]{2,3}|[A-Za-z][A-Za-z·\s'-]{1,24})$", combined)
+                parsed_name = suffix_match.group(1).strip() if suffix_match else combined
+                if "后裔" in combined and parsed_name.startswith("裔"):
+                    parsed_name = parsed_name[1:]
+                identity = combined.removesuffix(parsed_name).strip("：: ，,")
+
+            for pattern in NPC_SECTION_PATTERNS:
+                if parsed_name:
+                    break
+                match = pattern.match(cleaned)
+                if not match:
+                    continue
+                groups = [item.strip() for item in match.groups() if item is not None]
+                if len(groups) >= 2 and any(token in cleaned for token in ("：", ":")):
+                    identity = groups[0]
+                    parsed_name = groups[1]
+                else:
+                    parsed_name = groups[0] if groups else ""
+                    identity = groups[1] if len(groups) >= 2 else ""
+                if parsed_name:
+                    break
+
+            if not parsed_name:
+                continue
+
+            detail = ""
+            for follow_line in lines[index + 1 : index + 8]:
+                stripped = follow_line.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("#"):
+                    break
+                detail_match = re.search(r"(?:身份|细节|潜在动机|动机|美德|利益锚点)[：:]\s*(.+)", stripped)
+                if detail_match:
+                    detail = detail_match.group(1).strip()
+                    break
+
+            candidates[parsed_name] = self._build_story_npc_payload(
+                parsed_name,
+                identity=identity,
+                detail=detail,
+                role_hint=identity,
+            )
+
+        return candidates
+
+    @staticmethod
+    def _collect_actor_ids(state: GameState) -> set[str]:
+        actor_ids: set[str] = set()
+        for objective in state.scenario.objectives.values():
+            actor_ids.update(objective.related_actor_ids)
+        for secret in state.scenario.secrets.values():
+            actor_ids.update(secret.known_actor_ids)
+        return actor_ids
+
+    @staticmethod
+    def _actor_id_to_display_name(actor_id: str) -> str:
+        suffix = actor_id.strip().split("_")[-1]
+        if not suffix:
+            return ""
+        if suffix.isupper() and len(suffix) <= 8:
+            return suffix.title()
+        return suffix.replace("-", " ").replace("_", " ").strip()
+
+    def _infer_opening_visible_names(
+        self,
+        state: GameState,
+        candidate_names: Sequence[str],
+        *,
+        opening_text: str | None = None,
+    ) -> list[str]:
+        visible_names = list(dict.fromkeys(name for name in state.scene.visible_npcs if name))
+        if visible_names:
+            return visible_names
+
+        source_text = "\n".join(
+            part for part in (self.scenario.opening_scene, opening_text or "", state.scene.description) if part
+        )
+        for name in candidate_names:
+            if name and name in source_text:
+                visible_names.append(name)
+
+        for pattern in VISIBLE_NPC_TITLE_PATTERNS:
+            for match in pattern.findall(source_text):
+                label = match.strip()
+                if "的" in label:
+                    label = label.split("的")[-1].strip()
+                if label and label not in visible_names:
+                    visible_names.append(label)
+
+        return list(dict.fromkeys(visible_names))
+
+    def _seed_story_npcs_into_state(self, state: GameState, *, opening_text: str | None = None) -> GameState:
+        registry = {name: npc.model_copy(deep=True) for name, npc in state.npcs.items()}
+        story_candidates = self._extract_story_npc_candidates()
+        visible_names = self._infer_opening_visible_names(
+            state,
+            list(story_candidates.keys()),
+            opening_text=opening_text,
+        )
+
+        for name, payload in story_candidates.items():
+            payload["location"] = state.scene.location
+            payload["task_summary"] = f"???????{state.scenario.current_stage}????"
+            payload["last_public_status"] = f"??????{state.scenario.current_arc}????"
+            payload["current_goal"] = f"?{state.scenario.current_stage}??????????"
+            payload["is_visible"] = name in visible_names
+            existing = registry.get(name)
+            if existing is None:
+                registry[name] = NpcState.model_validate(payload)
+                continue
+
+            merged = existing.model_dump(mode="python")
+            for key, value in payload.items():
+                if key == "tags":
+                    merged["tags"] = list(dict.fromkeys([*merged.get("tags", []), *value]))
+                    continue
+                if value and not merged.get(key):
+                    merged[key] = value
+            merged["is_visible"] = merged.get("is_visible", False) or name in visible_names
+            if not merged.get("location"):
+                merged["location"] = state.scene.location
+            registry[name] = NpcState.model_validate(merged)
+
+        if not story_candidates:
+            for actor_id in self._collect_actor_ids(state):
+                if not actor_id.lower().startswith(("npc_", "act_")):
+                    continue
+                display_name = self._actor_id_to_display_name(actor_id)
+                if not display_name or display_name in registry:
+                    continue
+                registry[display_name] = NpcState(
+                    name=display_name,
+                    identity=f"Scenario actor {actor_id}",
+                    description="Auto-seeded from scenario state actor reference.",
+                    location=state.scene.location,
+                    current_goal=f"与当前剧情“{state.scenario.current_stage}”相关。",
+                    task_summary=f"围绕当前阶段“{state.scenario.current_stage}”行动。",
+                    last_public_status="尚未正式出场。",
+                    is_visible=display_name in visible_names,
+                    tags=["story_seeded", "scenario_actor"],
+                )
+
+        updated_scene = state.scene.model_copy(update={"visible_npcs": list(dict.fromkeys(visible_names))})
+        updated_core = state.core.model_copy(update={"scene": updated_scene, "npcs": registry})
+        return _normalize_initial_state(state.model_copy(update={"core": updated_core}))
 
     @classmethod
     def from_prompt_files(
@@ -273,6 +794,7 @@ class MinimalTRPGEngine:
         preference_path: str | None = None,
         registry_path: str | None = None,
         options: RuntimeOptions = RuntimeOptions(),
+        language_code: str = "zh-CN",
         scene_id: str = "opening",
         location: str | None = None,
         scene_description: str | None = None,
@@ -285,7 +807,7 @@ class MinimalTRPGEngine:
         state_override_path: str | None = None,
     ) -> "MinimalTRPGEngine":
         repo = prompt_repository or PromptRepository()
-        scenario = repo.load_scenario(rule_code=rule_code, story_code=story_code)
+        scenario = repo.load_scenario(rule_code=rule_code, story_code=story_code, language_code=language_code)
         state_overrides = repo.load_state_overrides(
             rule_code=rule_code,
             story_code=story_code,
@@ -315,6 +837,7 @@ class MinimalTRPGEngine:
             preference_path=preference_path,
             registry_path=registry_path,
             options=options,
+            language_code=language_code,
         )
 
     def shutdown(self, *, wait: bool = False) -> None:
@@ -408,6 +931,7 @@ class MinimalTRPGEngine:
             },
         )
         messages: list[Message] = [
+            {"role": "system", "content": get_opening_language_note(self.language_code)},
             {"role": "system", "content": self.scenario.rule_excerpt(self.options.opening_rule_chars)},
             {"role": "assistant", "content": self.scenario.story_excerpt(self.options.opening_story_chars)},
             {"role": "user", "content": self.scenario.beginning_prompt},
@@ -435,6 +959,66 @@ class MinimalTRPGEngine:
             payload={"text_length": len(opening)},
         )
         return opening
+
+    def initialize_opening_npc_manager(
+        self,
+        opening_text: str,
+        *,
+        progress_callback: Callable[[str], None] | None = None,
+        event_callback: Callable[[RuntimeLogEvent], None] | None = None,
+    ) -> NPCManagerOutput:
+        self._emit_runtime_log(
+            progress_callback=progress_callback,
+            event_callback=event_callback,
+            phase="opening",
+            stage="seed_npcs",
+            message="[Opening] Seeding opening NPC state...",
+        )
+        with self._state_lock:
+            self.state = self._seed_story_npcs_into_state(self.state, opening_text=opening_text)
+            working_state = self.state.model_copy(deep=True)
+
+        opening_action = ParsedPlayerAction(
+            raw_text="[opening initialization]",
+            intent="opening",
+            target=None,
+            approach=None,
+            tags=["opening"],
+        )
+        npc_context = self.build_npc_context(opening_action, working_state)
+        npc_result = self._call_npc_manager_from_context(npc_context)
+
+        updated_state = apply_delta(working_state, npc_result.state_delta)
+        npc_notes = list(updated_state.agent_runtime.npc_manager_notes)
+        npc_notes.extend(update.progress for update in npc_result.background_updates if update.progress)
+        updated_state = updated_state.model_copy(
+            update={
+                "agent_runtime": updated_state.agent_runtime.model_copy(
+                    update={"npc_manager_notes": npc_notes[-12:]}
+                )
+            }
+        )
+
+        with self._state_lock:
+            self.state = updated_state
+            self._opening_npc_result = npc_result
+            self._opening_npc_initialized = True
+
+        self._emit_runtime_log(
+            progress_callback=progress_callback,
+            event_callback=event_callback,
+            phase="opening",
+            stage="npc_manager_ready",
+            message="[Opening] NPC Manager initialized opening state.",
+            payload={
+                "visible_npcs": npc_result.active_visible_npcs,
+                "background_npcs": npc_result.active_background_npcs,
+            },
+        )
+        return npc_result
+
+    def get_opening_npc_result(self) -> NPCManagerOutput | None:
+        return self._opening_npc_result
 
     @staticmethod
     def _emit_progress(progress_callback: Callable[[str], None] | None, message: str) -> None:
@@ -537,7 +1121,7 @@ class MinimalTRPGEngine:
 
         with self._state_lock:
             state_before = self.state.model_copy(deep=True)
-        action = parse_player_action(player_text)
+        action = parse_player_action(player_text, language_code=self.language_code)
         director_state_used = state_before.director.model_copy(deep=True)
 
         dicer_context = self.build_dicer_context(action, state_before)
@@ -694,7 +1278,7 @@ class MinimalTRPGEngine:
         )
         with self._state_lock:
             state_before = self.state.model_copy(deep=True)
-        action = parse_player_action(player_text)
+        action = parse_player_action(player_text, language_code=self.language_code)
         director_state_used = state_before.director.model_copy(deep=True)
 
         self._emit_runtime_log(
@@ -1245,6 +1829,131 @@ class MinimalTRPGEngine:
             registry_path=self.registry_path,
             temperature=self.options.narrator_temperature,
         )
+
+    def _call_dicer_from_context(self, context: dict[str, object]) -> DicerOutput:
+        messages: list[Message] = [{"role": "system", "content": self.scenario.dicer_prompt}]
+        localized_note = get_localized_agent_note("dicer", self.language_code)
+        if localized_note:
+            messages.append({"role": "system", "content": localized_note})
+        messages.extend(
+            [
+                {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=False)},
+                {
+                    "role": "system",
+                    "content": (
+                        "Use rule_reference, story_reference, rule_state, and scenario_state as stable truth sources. "
+                        "Treat history_view as compressed history and state_focus as the most relevant slice for this turn. "
+                        "Return state changes only through state_delta, and keep event_log_entries short and factual."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": "Complete this turn's Dicer output from the JSON context below:\n"
+                    + json.dumps(context, ensure_ascii=False, indent=2),
+                },
+            ]
+        )
+
+        return generate_structured_output(
+            messages=messages,
+            output_schema=DicerOutput,
+            preference_path=self.preference_path,
+            registry_path=self.registry_path,
+            temperature=self.options.dicer_temperature,
+        )
+
+    def _call_npc_manager_from_context(self, context: dict[str, object]) -> NPCManagerOutput:
+        if not context["visible_npcs"] and not context["background_npcs"]:
+            return NPCManagerOutput()
+
+        messages: list[Message] = [{"role": "system", "content": self.scenario.npc_manager_prompt}]
+        localized_note = get_localized_agent_note("npc_manager", self.language_code)
+        if localized_note:
+            messages.append({"role": "system", "content": localized_note})
+        messages.extend(
+            [
+                {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=False)},
+                {
+                    "role": "system",
+                    "content": (
+                        "This step runs in parallel with Dicer, so react from player intent, NPC state, scene state, and recent history only. "
+                        "Do not wait for Dicer results, do not adjudicate rules, and do not perform macro plotting for Director. "
+                        "Keep state_delta focused on NPC and scene changes, and keep event_log_entries short and factual."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": "Complete the NPC Manager output from the JSON context below:\n"
+                    + json.dumps(context, ensure_ascii=False, indent=2),
+                },
+            ]
+        )
+
+        return generate_structured_output(
+            messages=messages,
+            output_schema=NPCManagerOutput,
+            preference_path=self.preference_path,
+            registry_path=self.registry_path,
+            temperature=self.options.npc_temperature,
+        )
+
+    def _call_director_from_context(self, context: dict[str, object]) -> DirectorOutput:
+        messages: list[Message] = [{"role": "system", "content": self.scenario.director_prompt}]
+        localized_note = get_localized_agent_note("director", self.language_code)
+        if localized_note:
+            messages.append({"role": "system", "content": localized_note})
+        messages.extend(
+            [
+                {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=False)},
+                {
+                    "role": "system",
+                    "content": (
+                        "Your output affects the next turn rather than rewriting the Narrator text that just completed. "
+                        "Use the latest action, Dicer, NPC, Narrator output, and history to shape next-turn pacing and macro progression. "
+                        "Do not adjudicate rules for Dicer or generate detailed NPC dialogue for NPC Manager."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": "Complete the next-turn Director output from the JSON context below:\n"
+                    + json.dumps(context, ensure_ascii=False, indent=2),
+                },
+            ]
+        )
+
+        return generate_structured_output(
+            messages=messages,
+            output_schema=DirectorOutput,
+            preference_path=self.preference_path,
+            registry_path=self.registry_path,
+            temperature=self.options.director_temperature,
+        )
+
+    def _build_narrator_messages(self, context: dict[str, object]) -> list[Message]:
+        messages: list[Message] = [{"role": "system", "content": self.scenario.narrator_prompt}]
+        localized_note = get_localized_agent_note("narrator", self.language_code)
+        if localized_note:
+            messages.append({"role": "system", "content": localized_note})
+        messages.extend(
+            [
+                {"role": "system", "content": get_narrator_language_note(self.language_code)},
+                {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=True)},
+                {
+                    "role": "system",
+                    "content": (
+                        "Narrator should use the already-completed director_state from the previous turn rather than the newly generated Director result. "
+                        "Use dicer_result as the rules-and-outcome baseline, show NPC reactions through npc_result, and translate director_state into tone and pacing. "
+                        "Do not invent major new NPC actions, major events, or main-plot breakthroughs."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": "Turn the JSON context below into player-facing narration:\n"
+                    + json.dumps(context, ensure_ascii=False, indent=2),
+                },
+            ]
+        )
+        return messages
 
     def _schedule_director_update(
         self,

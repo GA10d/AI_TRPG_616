@@ -1,87 +1,78 @@
+from __future__ import annotations
+
 from enum import Enum
 
+
 class OptionLanguage(Enum):
-    '''
-    语言选项枚举类，包含常用语言及其代码。
-     每个枚举成员包含一个唯一的 ID、语言名称和语言代码。
-     语言代码遵循 ISO 639-1 标准，部分语言使用了区域代码以区分不同的变体（如中文简体和繁体）。
-     该枚举类还提供了一个 classmethod 用于根据语言代码获取对应的枚举成员，以及一个实例方法用于生成系统提示语，要求回复严格使用指定的语言。
-    '''
-    CHINESE_SIMPLIFIED = (1, "中文（简体）", "zh-CN")
-    CHINESE_TRADITIONAL = (2, "中文（繁體）", "zh-TW")
-    ENGLISH = (3, "English", "en")
-    JAPANESE = (4, "日本語", "ja")
-    KOREAN = (5, "한국어", "ko")
-    FRENCH = (6, "Français", "fr")
-    GERMAN = (7, "Deutsch", "de")
-    SPANISH = (8, "Español", "es")
-    PORTUGUESE = (9, "Português", "pt")
-    ITALIAN = (10, "Italiano", "it")
+    CHINESE_SIMPLIFIED = (1, "Simplified Chinese", "zh-CN", "简体中文")
+    CHINESE_TRADITIONAL = (2, "Traditional Chinese", "zh-TW", "繁體中文")
+    ENGLISH = (3, "English", "en", "English")
+    JAPANESE = (4, "Japanese", "ja", "日本語")
+    KOREAN = (5, "Korean", "ko", "한국어")
+    FRENCH = (6, "French", "fr", "Français")
+    GERMAN = (7, "German", "de", "Deutsch")
+    SPANISH = (8, "Spanish", "es", "Español")
+    PORTUGUESE = (9, "Portuguese", "pt", "Português")
+    ITALIAN = (10, "Italian", "it", "Italiano")
+    RUSSIAN = (11, "Russian", "ru", "Русский")
+    ARABIC = (12, "Arabic", "ar", "العربية")
+    HINDI = (13, "Hindi", "hi", "हिन्दी")
+    DUTCH = (14, "Dutch", "nl", "Nederlands")
+    SWEDISH = (15, "Swedish", "sv", "Svenska")
+    NORWEGIAN = (16, "Norwegian", "no", "Norsk")
+    DANISH = (17, "Danish", "da", "Dansk")
+    FINNISH = (18, "Finnish", "fi", "Suomi")
+    UKRAINIAN = (19, "Ukrainian", "uk", "Українська")
+    POLISH = (20, "Polish", "pl", "Polski")
+    CZECH = (21, "Czech", "cs", "Čeština")
+    SLOVAK = (22, "Slovak", "sk", "Slovenčina")
+    HUNGARIAN = (23, "Hungarian", "hu", "Magyar")
+    ROMANIAN = (24, "Romanian", "ro", "Română")
+    BULGARIAN = (25, "Bulgarian", "bg", "Български")
+    SERBIAN = (26, "Serbian", "sr", "Српски")
+    BENGALI = (27, "Bengali", "bn", "বাংলা")
+    URDU = (28, "Urdu", "ur", "اردو")
+    TAMIL = (29, "Tamil", "ta", "தமிழ்")
+    TELUGU = (30, "Telugu", "te", "తెలుగు")
+    THAI = (31, "Thai", "th", "ไทย")
+    VIETNAMESE = (32, "Vietnamese", "vi", "Tiếng Việt")
+    INDONESIAN = (33, "Indonesian", "id", "Bahasa Indonesia")
+    MALAY = (34, "Malay", "ms", "Bahasa Melayu")
+    FILIPINO = (35, "Filipino", "fil", "Filipino")
+    HEBREW = (36, "Hebrew", "he", "עברית")
+    PERSIAN = (37, "Persian", "fa", "فارسی")
+    TURKISH = (38, "Turkish", "tr", "Türkçe")
+    GREEK = (39, "Greek", "el", "Ελληνικά")
+    LATIN = (40, "Latin", "la", "Latina")
 
-    # —— 常用扩展 ——
-    RUSSIAN = (11, "Русский", "ru")
-    ARABIC = (12, "العربية", "ar")
-    HINDI = (13, "हिन्दी", "hi")
-    DUTCH = (14, "Nederlands", "nl")
-    SWEDISH = (15, "Svenska", "sv")
-    NORWEGIAN = (16, "Norsk", "no")
-    DANISH = (17, "Dansk", "da")
-    FINNISH = (18, "Suomi", "fi")
-    UKRAINIAN = (19, "Українська", "uk")
-    POLISH = (20, "Polski", "pl")
-
-    # —— 东欧 / 巴尔干 ——
-    CZECH = (21, "Čeština", "cs")
-    SLOVAK = (22, "Slovenčina", "sk")
-    HUNGARIAN = (23, "Magyar", "hu")
-    ROMANIAN = (24, "Română", "ro")
-    BULGARIAN = (25, "Български", "bg")
-    SERBIAN = (26, "Српски", "sr")
-
-    # —— 南亚 ——
-    BENGALI = (27, "বাংলা", "bn")
-    URDU = (28, "اردو", "ur")
-    TAMIL = (29, "தமிழ்", "ta")
-    TELUGU = (30, "తెలుగు", "te")
-
-    # —— 东南亚 ——
-    THAI = (31, "ไทย", "th")
-    VIETNAMESE = (32, "Tiếng Việt", "vi")
-    INDONESIAN = (33, "Bahasa Indonesia", "id")
-    MALAY = (34, "Bahasa Melayu", "ms")
-    FILIPINO = (35, "Filipino", "fil")
-
-    # —— 中东 / 其他 ——
-    HEBREW = (36, "עברית", "he")
-    PERSIAN = (37, "فارسی", "fa")
-    TURKISH = (38, "Türkçe", "tr")
-    GREEK = (39, "Ελληνικά", "el")
-    LATIN = (40, "Latina", "la")
-
-
-    def __new__(cls, id: int, label: str, code: str):
-        '''
-        自定义 __new__ 方法以支持枚举成员的多个属性。
-        '''
+    def __new__(cls, id: int, label: str, code: str, native_label: str):
         obj = object.__new__(cls)
-        obj._value_ = id        
+        obj._value_ = id
         obj.id = id
         obj.label = label
         obj.code = code
+        obj.native_label = native_label
         return obj
 
     @classmethod
     def from_code(cls, code: str) -> "OptionLanguage":
-        '''
-         根据语言代码获取对应的枚举成员，如果未找到则返回默认值（中文简体）。
-        '''
+        normalized = (code or "").strip().casefold()
         for item in cls:
-            if item.code == code:
+            if item.code.casefold() == normalized:
                 return item
         return cls.CHINESE_SIMPLIFIED
 
+    @classmethod
+    def list_options(cls) -> list["OptionLanguage"]:
+        return list(cls)
+
     def system_prompt(self) -> str:
-        '''
-         生成系统提示语，要求回复严格使用指定的语言。
-        '''
         return f"Reply strictly in {self.label} ({self.code})."
+
+    def to_payload(self) -> dict[str, str | int]:
+        return {
+            "id": self.id,
+            "code": self.code,
+            "label": self.label,
+            "native_label": self.native_label,
+        }

@@ -46,14 +46,38 @@ class DicerOutput(BaseModel):
 
 class NPCVisibleBeat(BaseModel):
     npc_name: str = Field(description="Visible NPC name.")
+    label: str = Field(default="", description="Short NPC label combining role or vibe for monitor-style display.")
     action: str = Field(default="", description="Visible action taken by the NPC this turn.")
     dialogue: str = Field(default="", description="Public dialogue line from the NPC this turn.")
     emotion: str = Field(default="", description="Outward emotion currently shown by the NPC.")
+    tone: str = Field(default="", description="Speech tone or delivery style such as cold, urgent, gentle, or evasive.")
+    expression: str = Field(default="", description="Brief facial expression or body-language summary visible to the player.")
+    inner_state_note: str = Field(
+        default="",
+        description="Private short note about the NPC's inner state for engine use, not direct player display.",
+    )
+    concealment_note: str = Field(
+        default="",
+        description="Private note about what the NPC is hiding, deflecting, or lying about this turn.",
+    )
 
 
 class NPCBackgroundBeat(BaseModel):
     npc_name: str = Field(description="Off-screen or background NPC name.")
     progress: str = Field(default="", description="Short summary of background progress for this NPC.")
+    label: str = Field(default="", description="Short NPC label combining role or vibe for monitor-style display.")
+    location: str = Field(default="", description="Current off-screen location or rough area of activity.")
+    task: str = Field(default="", description="Task the NPC is currently handling off-screen.")
+    eta_minutes: int | None = Field(default=None, description="Estimated minutes until the next meaningful update.")
+    contact_plan: str = Field(default="", description="How the NPC may next surface or relay this update if at all.")
+    state_change: str = Field(default="", description="Important off-screen state change such as injured, armed, allied, or suspicious.")
+
+
+class NPCTimelineNote(BaseModel):
+    npc_name: str = Field(description="NPC tied to the timeline note.")
+    note: str = Field(default="", description="Short explanation of the timeline trigger, deadline, or callback.")
+    due_in_minutes: int | None = Field(default=None, description="Minutes until the note should matter, if known.")
+    trigger_reason: str = Field(default="", description="Why this note matters now, such as elapsed task time or scene entry.")
 
 
 class NPCManagerOutput(BaseModel):
@@ -64,6 +88,18 @@ class NPCManagerOutput(BaseModel):
     background_updates: list[NPCBackgroundBeat] = Field(
         default_factory=list,
         description="Off-screen NPC progress not necessarily shown directly to the player.",
+    )
+    timeline_notes: list[NPCTimelineNote] = Field(
+        default_factory=list,
+        description="Timeline or callback notes that help future turns surface NPC task progress consistently.",
+    )
+    active_visible_npcs: list[str] = Field(
+        default_factory=list,
+        description="Names of NPCs directly present in the scene this turn according to NPC Manager.",
+    )
+    active_background_npcs: list[str] = Field(
+        default_factory=list,
+        description="Names of NPCs considered active off-screen this turn according to NPC Manager.",
     )
     state_delta: list[DeltaOperation] = Field(default_factory=list, description="NPC-driven state mutations.")
     event_log_entries: list[str] = Field(default_factory=list, description="Objective NPC event log entries.")
@@ -91,27 +127,64 @@ class RelationshipState(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Relationship tags such as ally, suspicious, or indebted.")
 
 
+class NPCContactChannel(BaseModel):
+    channel: str = Field(description="Contact channel such as in_person, phone, radio, letter, or messenger.")
+    availability: str = Field(default="", description="Whether the channel is available right now and under what limits.")
+    notes: str = Field(default="", description="Optional short note about how this channel works for the NPC.")
+
+
+class NPCCurrentTask(BaseModel):
+    task_id: str = Field(default="", description="Stable identifier for the NPC's active task when available.")
+    summary: str = Field(default="", description="Short summary of the task currently being executed.")
+    status: str = Field(default="idle", description="Task status such as idle, active, blocked, complete, or interrupted.")
+    location: str = Field(default="", description="Human-readable place where the task is being carried out.")
+    eta_minutes: int | None = Field(default=None, description="Estimated minutes until the task should progress or complete.")
+    progress_note: str = Field(default="", description="Latest short note about task progress.")
+    next_trigger: str = Field(default="", description="Condition or timing note that should surface the next task update.")
+
+
 class NpcState(BaseModel):
     name: str = Field(description="NPC display name.")
     description: str = Field(default="", description="Short NPC card summary.")
+    identity: str = Field(default="", description="Role, job, or social identity such as caretaker, detective, or smuggler.")
+    age: str = Field(default="", description="Approximate age or age band when relevant to characterization.")
+    gender: str = Field(default="", description="Gender identity or presentation if the scenario defines it.")
+    appearance: str = Field(default="", description="Short outward appearance summary used to keep portrayals consistent.")
     attitude: str = Field(default="neutral", description="High-level attitude shown to the player.")
     disposition_to_player: str = Field(default="neutral", description="Current disposition toward the player.")
+    faction: str = Field(default="", description="Primary faction, family, organization, or alignment this NPC belongs to.")
     location: str = Field(default="", description="Human-readable current location.")
     location_id: str | None = Field(default=None, description="Canonical location identifier if known.")
     current_goal: str = Field(default="", description="Immediate goal driving this NPC right now.")
     long_term_goal: str = Field(default="", description="Longer objective or desire for the NPC.")
+    hidden_goal: str = Field(default="", description="Private hidden goal that should not be exposed to the player directly.")
+    personality_traits: list[str] = Field(default_factory=list, description="Stable personality traits such as cautious, proud, impulsive, or gentle.")
+    values: list[str] = Field(default_factory=list, description="Core values or principles that constrain this NPC's choices.")
+    stress_level: str = Field(default="steady", description="Current stress or pressure level for performance and dialogue tone.")
+    mental_state: str = Field(default="", description="Current short psychological state such as guarded, panicked, grieving, or composed.")
+    fears_or_triggers: list[str] = Field(default_factory=list, description="Known fears, vulnerabilities, or emotional trigger points.")
+    capabilities: list[str] = Field(default_factory=list, description="Things the NPC can credibly do, access, or influence.")
+    resource_notes: list[str] = Field(default_factory=list, description="Short notes about gear, allies, authority, money, or other practical resources.")
+    info_access_level: str = Field(default="", description="How much sensitive or scenario-critical information the NPC plausibly knows.")
     task_summary: str = Field(default="", description="Background task summary used by NPC Manager.")
     active_task_id: str | None = Field(default=None, description="Active background task identifier, if any.")
     task_eta_minutes: int | None = Field(default=None, description="Estimated time until the active task progresses.")
+    current_task: NPCCurrentTask | None = Field(default=None, description="Structured active task state for timeline tracking.")
     secret_summary: str = Field(default="", description="Private summary of the NPC's hidden truth or secret.")
+    known_truths: list[str] = Field(default_factory=list, description="Secret or sensitive facts this NPC knows and may selectively reveal.")
+    reveal_conditions: list[str] = Field(default_factory=list, description="Conditions under which the NPC may reveal hidden truth or shift stance.")
+    deception_mode: str = Field(default="", description="Current deception stance such as honest, evasive, lying, half_truth, or silent.")
     last_public_status: str = Field(default="", description="Most recent public-facing state update for this NPC.")
     is_visible: bool = Field(default=False, description="Whether the NPC is currently visible in the active scene.")
+    distance_to_player: str = Field(default="", description="Short relational or physical distance note such as nearby, in next room, or radio-only.")
+    contact_channels: list[NPCContactChannel] = Field(default_factory=list, description="Ways the player or other actors can currently reach this NPC.")
     relationship_stage: str = Field(default="", description="Relationship stage used by romance or social-heavy rules.")
     known_clue_ids: list[str] = Field(default_factory=list, description="Clue identifiers known by this NPC.")
     relationship_edges: dict[str, RelationshipState] = Field(
         default_factory=dict,
         description="Relationships from this NPC to other actors keyed by actor id or name.",
     )
+    other_npc_activity: list[str] = Field(default_factory=list, description="Short notes about current alliances, conflicts, or exchanges with other NPCs.")
     tags: list[str] = Field(default_factory=list, description="Free-form NPC tags for capability, faction, or archetype.")
 
 

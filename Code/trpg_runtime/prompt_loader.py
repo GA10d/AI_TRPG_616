@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from .language_support import get_prompt_path
 from .models import (
     ObjectiveState,
     RuleSeed,
@@ -189,7 +190,7 @@ class PromptRepository:
                 result.add(child.name)
         return sorted(result)
 
-    def load_scenario(self, rule_code: str, story_code: str) -> ScenarioBundle:
+    def load_scenario(self, rule_code: str, story_code: str, *, language_code: str | None = None) -> ScenarioBundle:
         normalized_rule = rule_code.upper()
 
         rule_path = self._rule_dir(normalized_rule) / f"{normalized_rule}_PROMPT.txt"
@@ -203,12 +204,11 @@ class PromptRepository:
 
         rule_text = _read_text(rule_path)
         story_text = _read_text(story_path)
-        beginning_prompt = _read_text(beginning_path)
-
-        dicer_prompt = _read_text(self.agent_prompt_root / "data_Dicer.txt")
-        npc_manager_prompt = _read_text(self.agent_prompt_root / "data_NpcManager.txt")
-        director_prompt = _read_text(self.agent_prompt_root / "data_Director.txt")
-        narrator_prompt = _read_text(self.agent_prompt_root / "data_Narrator.txt")
+        beginning_prompt = _read_text(self._resolve_agent_prompt_path("data_Beginning.txt", language_code=language_code, base_path=beginning_path))
+        dicer_prompt = _read_text(self._resolve_agent_prompt_path("data_Dicer.txt", language_code=language_code))
+        npc_manager_prompt = _read_text(self._resolve_agent_prompt_path("data_NpcManager.txt", language_code=language_code))
+        director_prompt = _read_text(self._resolve_agent_prompt_path("data_Director.txt", language_code=language_code))
+        narrator_prompt = _read_text(self._resolve_agent_prompt_path("data_Narrator.txt", language_code=language_code))
 
         return ScenarioBundle(
             rule_code=normalized_rule,
@@ -631,6 +631,21 @@ class PromptRepository:
             return legacy_path
 
         raise FileNotFoundError(new_path)
+
+    def _resolve_agent_prompt_path(
+        self,
+        file_name: str,
+        *,
+        language_code: str | None = None,
+        base_path: Path | None = None,
+    ) -> Path:
+        localized = get_prompt_path(language_code, file_name)
+        if localized is not None:
+            return localized
+
+        if base_path is not None:
+            return base_path
+        return self.agent_prompt_root / file_name
 
     def _rule_dir(self, rule_code: str) -> Path:
         new_dir = self.prompt_root / rule_code.upper() / "Rule"

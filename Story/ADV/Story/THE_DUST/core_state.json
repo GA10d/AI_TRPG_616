@@ -1,0 +1,95 @@
+{
+  "scene": {
+    "visible_npcs": [
+      "阿吉"
+    ]
+  },
+  "npcs": {
+    "阿吉": {
+      "name": "阿吉",
+      "description": "守陵人后裔，在遗迹入口附近与玩家同行，会给出有限但关键的风险提示。",
+      "identity": "守陵人后裔与遗迹本地向导",
+      "age": "青年",
+      "gender": "男",
+      "appearance": "头巾边缘常沾着砂，带着刻有遗迹地图的青铜短刀，说话压得很低。",
+      "attitude": "guarded",
+      "disposition_to_player": "cautious ally",
+      "faction": "守陵人家族",
+      "location": "《黑砂遗迹》（黑砂古城）",
+      "current_goal": "借玩家阻止盗掘者，同时避免玩家误踩机关或流沙。",
+      "long_term_goal": "守住遗迹与献祭核心，不让盗掘者得手。",
+      "hidden_goal": "在不违背家族誓言的前提下利用玩家解决自己不能明说的危机。",
+      "personality_traits": [
+        "谨慎",
+        "克制",
+        "警觉",
+        "有所保留"
+      ],
+      "values": [
+        "守墓职责",
+        "家族誓言",
+        "不让外人误入死地"
+      ],
+      "stress_level": "high",
+      "mental_state": "紧绷但克制，持续评估玩家是否可靠。",
+      "fears_or_triggers": [
+        "盗掘者接近献祭核心",
+        "玩家误踩机关或流沙",
+        "被逼迫说出家族誓言中的禁忌内容"
+      ],
+      "capabilities": [
+        "熟悉遗迹入口与前厅风险区",
+        "能辨认危险落点与可疑机关",
+        "可提供有限路线提示",
+        "具备近身自保能力"
+      ],
+      "resource_notes": [
+        "携带青铜短刀",
+        "掌握部分遗迹传说与路径经验"
+      ],
+      "info_access_level": "知道部分遗迹真相与献祭核心相关风险，但不会直接全盘说明。",
+      "task_summary": "在前厅与入口一带观察玩家落点，必要时给出有限提示。",
+      "active_task_id": "aji_watch_foyer",
+      "task_eta_minutes": 5,
+      "current_task": {
+        "task_id": "aji_watch_foyer",
+        "summary": "与玩家保持两三步距离，观察落点并在危险处给出有限提示。",
+        "status": "active",
+        "location": "前厅/入口一带",
+        "eta_minutes": 5,
+        "progress_note": "正在盯防暗板、流沙风险区，并观察玩家是否会直接踩入陷阱。",
+        "next_trigger": "当玩家靠近祭坛、碎片堆或可疑地面时给出更明确反应。"
+      },
+      "secret_summary": "因家族誓言隐瞒遗迹与核心的部分真相，不会一次性说透。",
+      "known_truths": [
+        "遗迹内存在误导视线与落点判断的风险",
+        "盗掘者已经先一步进入内部并携带炸药",
+        "献祭核心一旦处理失当会引发严重后果"
+      ],
+      "reveal_conditions": [
+        "玩家证明自己值得信任并持续合作",
+        "局势升级到必须说明部分真相才能避免死亡",
+        "玩家直接接触核心相关机关并逼近不可逆后果"
+      ],
+      "deception_mode": "evasive",
+      "last_public_status": "在入口处拦下玩家并警告不要轻信眼前看见的路径。",
+      "is_visible": true,
+      "distance_to_player": "近距离同行，通常保持两三步并避开危险落点。",
+      "contact_channels": [
+        {
+          "channel": "in_person",
+          "availability": "当前可直接对话",
+          "notes": "与玩家同行时会低声提醒，但不会主动说透全部信息。"
+        }
+      ],
+      "other_npc_activity": [
+        "持续警惕内部盗掘者动向，但暂未与其正面接触。"
+      ],
+      "tags": [
+        "guardian",
+        "local_guide",
+        "withholding_truth"
+      ]
+    }
+  }
+}

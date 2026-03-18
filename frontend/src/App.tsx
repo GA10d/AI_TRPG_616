@@ -5,6 +5,8 @@ import nightwatchBg from "../夜航控制台.png";
 import neonBg from "../赛博霓虹.png";
 import {
   CatalogResponse,
+  fetchLanguagePack,
+  LanguageOption,
   RuleOption,
   SaveEntry,
   SessionResponse,
@@ -23,6 +25,7 @@ import {
 
 type MessageRole = "system" | "player" | "ai";
 type ThemeName = "parchment" | "nightwatch" | "neon";
+type UiLanguage = "zh-CN" | "zh-TW" | "en" | "ja";
 
 interface ChatMessage {
   id: string;
@@ -39,12 +42,208 @@ interface AgentMonitorState {
   narrator: string;
 }
 
-interface PanelSectionProps {
+interface PanelProps {
   title: string;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
+  toggleText: string;
 }
+
+const COPY = {
+  "zh-CN": {
+    title: "Direct Play 控制台",
+    playerConfig: "玩家配置",
+    playerName: "玩家名",
+    rule: "规则",
+    story: "剧本",
+    language: "语言",
+    turns: "最大轮数",
+    start: "开始会话",
+    restart: "重新开始",
+    creating: "创建中...",
+    loading: "正在读取规则与剧本...",
+    opening: "开场摘要",
+    status: "当前状态",
+    scene: "场景详情",
+    save: "存档",
+    load: "读档",
+    export: "导出历史",
+    search: "搜索",
+    selectSave: "选择存档",
+    player: "玩家",
+    narrator: "主持人",
+    system: "系统",
+    send: "发送",
+    sending: "发送中...",
+    clear: "清空",
+    startFirst: "请先开始会话",
+    processing: "处理中",
+    idle: "先在左侧选择规则、剧本和语言，然后开始会话。",
+    createProgress: "正在创建会话并生成开场，请稍候...",
+    turnProgress: "正在推进回合，主持人开始组织叙事...",
+    sessionCreated: "会话已创建",
+    saveDone: "存档完成",
+    loadDone: "已读档",
+    exportDone: "历史已导出",
+    sessionFinished: "已达到本局最大轮数，请重新开始或先存档。",
+    localizedPrompt: "该语言会启用增强 prompt。",
+    fallbackPrompt: "该语言走通用 prompt，但 Narrator 会按所选语言输出。",
+    none: "暂无",
+    expand: "展开",
+    collapse: "收起",
+    monitor: "Agent Monitor",
+    live: "实时输出",
+    placeholder: "行动示例：进入大厅观察壁画，并询问守卫昨晚发生了什么？",
+    themeParchment: "羊皮纸叙事",
+    themeNightwatch: "夜航控制台",
+    themeNeon: "赛博霓虹",
+  },
+  "zh-TW": {
+    title: "Direct Play 控制台",
+    playerConfig: "玩家設定",
+    playerName: "玩家名",
+    rule: "規則",
+    story: "劇本",
+    language: "語言",
+    turns: "最大輪數",
+    start: "開始會話",
+    restart: "重新開始",
+    creating: "建立中...",
+    loading: "正在讀取規則與劇本...",
+    opening: "開場摘要",
+    status: "目前狀態",
+    scene: "場景詳情",
+    save: "存檔",
+    load: "讀檔",
+    export: "匯出歷史",
+    search: "搜尋",
+    selectSave: "選擇存檔",
+    player: "玩家",
+    narrator: "主持人",
+    system: "系統",
+    send: "送出",
+    sending: "送出中...",
+    clear: "清空",
+    startFirst: "請先開始會話",
+    processing: "處理中",
+    idle: "先在左側選擇規則、劇本和語言，然後開始會話。",
+    createProgress: "正在建立會話並生成開場，請稍候...",
+    turnProgress: "正在推進回合，主持人開始組織敘事...",
+    sessionCreated: "會話已建立",
+    saveDone: "存檔完成",
+    loadDone: "已讀檔",
+    exportDone: "歷史已匯出",
+    sessionFinished: "已達到本局最大輪數，請重新開始或先存檔。",
+    localizedPrompt: "該語言會啟用增強 prompt。",
+    fallbackPrompt: "該語言走通用 prompt，但 Narrator 會用所選語言輸出。",
+    none: "暫無",
+    expand: "展開",
+    collapse: "收起",
+    monitor: "Agent Monitor",
+    live: "即時輸出",
+    placeholder: "行動示例：進入大廳觀察壁畫，並詢問守衛昨晚發生了什麼？",
+    themeParchment: "羊皮紙敘事",
+    themeNightwatch: "夜航控制台",
+    themeNeon: "賽博霓虹",
+  },
+  en: {
+    title: "Direct Play Console",
+    playerConfig: "Player Setup",
+    playerName: "Player Name",
+    rule: "Rule",
+    story: "Story",
+    language: "Language",
+    turns: "Max Turns",
+    start: "Start Session",
+    restart: "Restart",
+    creating: "Creating...",
+    loading: "Loading rules and stories...",
+    opening: "Opening",
+    status: "State",
+    scene: "Scene",
+    save: "Save",
+    load: "Load",
+    export: "Export History",
+    search: "Search",
+    selectSave: "Select Save",
+    player: "Player",
+    narrator: "Narrator",
+    system: "System",
+    send: "Send",
+    sending: "Sending...",
+    clear: "Clear",
+    startFirst: "Start a session first",
+    processing: "Processing",
+    idle: "Choose a rule, story, and language on the left, then start a session.",
+    createProgress: "Creating the session and generating the opening...",
+    turnProgress: "Advancing the turn. The narrator is organizing the scene...",
+    sessionCreated: "Session created",
+    saveDone: "Save complete",
+    loadDone: "Loaded save",
+    exportDone: "History exported",
+    sessionFinished: "This run has reached its max turn count. Restart or save first.",
+    localizedPrompt: "This language uses enhanced localized prompts.",
+    fallbackPrompt: "This language uses the generic prompt path, but Narrator still outputs in the selected language.",
+    none: "None",
+    expand: "Expand",
+    collapse: "Collapse",
+    monitor: "Agent Monitor",
+    live: "Live Output",
+    placeholder: "Example action: Enter the hall, inspect the mural, and ask the guard what happened last night.",
+    themeParchment: "Parchment",
+    themeNightwatch: "Nightwatch",
+    themeNeon: "Neon",
+  },
+  ja: {
+    title: "Direct Play コンソール",
+    playerConfig: "プレイヤー設定",
+    playerName: "プレイヤー名",
+    rule: "ルール",
+    story: "シナリオ",
+    language: "言語",
+    turns: "最大ターン数",
+    start: "セッション開始",
+    restart: "やり直す",
+    creating: "作成中...",
+    loading: "利用可能なルールとシナリオを読み込み中...",
+    opening: "導入",
+    status: "現在状態",
+    scene: "場面詳細",
+    save: "保存",
+    load: "読込",
+    export: "履歴を書き出す",
+    search: "検索",
+    selectSave: "セーブ選択",
+    player: "プレイヤー",
+    narrator: "ナレーター",
+    system: "システム",
+    send: "送信",
+    sending: "送信中...",
+    clear: "クリア",
+    startFirst: "先にセッションを開始してください",
+    processing: "処理中",
+    idle: "左側でルール、シナリオ、言語を選んでからセッションを開始してください。",
+    createProgress: "セッションを作成し、導入を生成しています...",
+    turnProgress: "ターンを進行中です。ナレーターが描写を組み立てています...",
+    sessionCreated: "セッションを作成しました",
+    saveDone: "保存しました",
+    loadDone: "読込完了",
+    exportDone: "履歴を出力しました",
+    sessionFinished: "このセッションは最大ターン数に達しました。やり直すか保存してください。",
+    localizedPrompt: "この言語では強化されたローカライズ prompt を使います。",
+    fallbackPrompt: "この言語では汎用 prompt を使いますが、Narrator の出力言語は切り替わります。",
+    none: "なし",
+    expand: "展開",
+    collapse: "折りたたむ",
+    monitor: "Agent Monitor",
+    live: "リアルタイム出力",
+    placeholder: "行動例: ホールに入り、壁画を調べ、昨夜何が起きたかを衛兵に尋ねる。",
+    themeParchment: "羊皮紙",
+    themeNightwatch: "ナイトウォッチ",
+    themeNeon: "ネオン",
+  },
+} as const;
 
 const themeBackgrounds: Record<ThemeName, string> = {
   parchment: parchmentBg,
@@ -52,19 +251,14 @@ const themeBackgrounds: Record<ThemeName, string> = {
   neon: neonBg,
 };
 
-const themeLabels: Record<ThemeName, string> = {
-  parchment: "羊皮纸叙事",
-  nightwatch: "夜航控制台",
-  neon: "赛博霓虹",
-};
-
-const emptyAgentMonitor: AgentMonitorState = {
-  dicer: "等待回合开始",
-  npcManager: "等待回合开始",
-  directorState: "等待会话开始",
-  director: "等待本回合结束",
-  narrator: "等待旁白生成",
-};
+function normalizeUiLanguage(code: string): UiLanguage {
+  const lowered = code.trim().toLowerCase();
+  if (lowered.startsWith("zh-tw")) return "zh-TW";
+  if (lowered.startsWith("ja")) return "ja";
+  if (lowered.startsWith("en")) return "en";
+  if (lowered.startsWith("zh")) return "zh-CN";
+  return "en";
+}
 
 function createMessage(role: MessageRole, content: string, createdAt = Date.now()): ChatMessage {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${createdAt}-${Math.random()}`;
@@ -74,184 +268,48 @@ function createMessage(role: MessageRole, content: string, createdAt = Date.now(
 function transcriptToMessages(transcript: TranscriptEntry[]): ChatMessage[] {
   return transcript
     .filter((entry) => entry.role === "system" || entry.role === "player" || entry.role === "ai")
-    .map((entry, index) =>
-      createMessage(
-        entry.role,
-        entry.content,
-        typeof entry.created_at === "number" ? entry.created_at : Date.now() + index
-      )
-    );
+    .map((entry, index) => createMessage(entry.role, entry.content, typeof entry.created_at === "number" ? entry.created_at : Date.now() + index));
 }
 
 function updateMessageContent(messages: ChatMessage[], id: string, content: string): ChatMessage[] {
   return messages.map((message) => (message.id === id ? { ...message, content } : message));
 }
 
-function hasMessageContent(messages: ChatMessage[], content: string): boolean {
-  return messages.some((message) => message.content === content);
-}
-
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function renderInlineRichText(text: string): ReactNode[] {
-  const parts = text.split(/(\*\*.*?\*\*)/g);
-  return parts.filter(Boolean).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
-      return <strong key={`strong-${index}`}>{part.slice(2, -2)}</strong>;
-    }
-    return <span key={`span-${index}`}>{part}</span>;
-  });
-}
-
 function renderRichText(text: string): ReactNode {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const blocks: ReactNode[] = [];
-  let listItems: string[] = [];
-  let paragraphLines: string[] = [];
-
-  const flushList = () => {
-    if (listItems.length === 0) return;
-    blocks.push(
-      <ul key={`list-${blocks.length}`} className="rich-text-list">
-        {listItems.map((item, index) => (
-          <li key={`item-${index}`}>{renderInlineRichText(item)}</li>
-        ))}
-      </ul>
-    );
-    listItems = [];
-  };
-
-  const flushParagraph = () => {
-    if (paragraphLines.length === 0) return;
-    const content = paragraphLines.join(" ").trim();
-    paragraphLines = [];
-    if (!content) return;
-    blocks.push(
-      <p key={`paragraph-${blocks.length}`} className="rich-text-paragraph">
-        {renderInlineRichText(content)}
-      </p>
-    );
-  };
-
-  lines.forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) {
-      flushList();
-      flushParagraph();
-      return;
-    }
-
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-    if (headingMatch) {
-      flushList();
-      flushParagraph();
-      const level = Math.min(headingMatch[1].length, 3);
-      const title = headingMatch[2].trim();
-      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
-      blocks.push(
-        <Tag key={`heading-${blocks.length}`} className={`rich-text-heading level-${level}`}>
-          {renderInlineRichText(title)}
-        </Tag>
-      );
-      return;
-    }
-
-    const listMatch = line.match(/^([-*]|\d+[.)])\s+(.*)$/);
-    if (listMatch) {
-      flushParagraph();
-      listItems.push(listMatch[2].trim());
-      return;
-    }
-
-    flushList();
-    paragraphLines.push(line);
-  });
-
-  flushList();
-  flushParagraph();
-
-  return blocks.length > 0 ? <div className="rich-text">{blocks}</div> : <p className="rich-text-paragraph">{text}</p>;
-}
-
-function toJoinedValue(values: string[], fallback = "暂无"): string {
-  return values.length > 0 ? values.join("、") : fallback;
-}
-
-function buildStatus(session: SessionResponse | null): Array<{ key: string; value: string }> {
-  if (!session) {
-    return [
-      { key: "规则", value: "未开始" },
-      { key: "剧本", value: "未开始" },
-      { key: "场景", value: "等待创建会话" },
-      { key: "剩余轮次", value: "-" },
-    ];
-  }
-
-  const { state } = session;
-  return [
-    { key: "规则", value: session.rule_code },
-    { key: "剧本", value: state.scenario.title || session.story_code },
-    { key: "场景", value: state.scene.location || "未知" },
-    { key: "剩余轮次", value: `${session.turns_remaining}/${session.max_turns}` },
-    { key: "可见 NPC", value: toJoinedValue(state.scene.visible_npcs) },
-    { key: "危险", value: toJoinedValue(state.scene.hazards) },
-    { key: "物品", value: toJoinedValue(state.player.inventory) },
-    { key: "线索", value: toJoinedValue(state.player.known_clues) },
-  ];
-}
-
-function formatJsonBlock(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
+  const lines = text.replace(/\r\n/g, "\n").split("\n").filter(Boolean);
+  return (
+    <div className="rich-text">
+      {lines.map((line, index) => (
+        <p key={`${index}-${line}`} className="rich-text-paragraph">
+          {line}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 function summarizeAgentEvent(event: StreamTurnAgentEvent): string {
-  const payload = event.payload;
-  if (event.agent_name === "dicer") {
-    return formatJsonBlock({
-      validity: payload.validity,
-      resolution: payload.resolution,
-      event_log_entries: payload.event_log_entries,
-      state_delta: payload.state_delta,
-    });
+  try {
+    return JSON.stringify(event.payload, null, 2);
+  } catch {
+    return String(event.payload);
   }
-  if (event.agent_name === "npc_manager") {
-    return formatJsonBlock({
-      visible_npcs_output: payload.visible_npcs_output,
-      background_updates: payload.background_updates,
-      event_log_entries: payload.event_log_entries,
-      state_delta: payload.state_delta,
-    });
-  }
-  if (event.agent_name === "director_state") {
-    return formatJsonBlock(payload);
-  }
-  if (event.agent_name === "director") {
-    return formatJsonBlock({
-      guidance: payload.guidance,
-      triggered_events: payload.triggered_events,
-      event_log_entries: payload.event_log_entries,
-      state_delta: payload.state_delta,
-    });
-  }
-  return formatJsonBlock(payload);
 }
 
-function PanelSection({ title, open, onToggle, children }: PanelSectionProps) {
+function Panel({ title, open, onToggle, children, toggleText }: PanelProps) {
   return (
     <section className="panel-card">
       <button type="button" className="panel-toggle" onClick={onToggle} aria-expanded={open}>
         <span>{title}</span>
-        <strong>{open ? "收起" : "展开"}</strong>
+        <strong>{toggleText}</strong>
       </button>
       {open ? <div className="panel-body">{children}</div> : null}
     </section>
   );
+}
+
+function getLanguageLabel(option: LanguageOption): string {
+  return option.native_label === option.label ? `${option.native_label} (${option.code})` : `${option.native_label} / ${option.label} (${option.code})`;
 }
 
 function truncateStoryTitle(story: StoryOption): string {
@@ -260,16 +318,14 @@ function truncateStoryTitle(story: StoryOption): string {
 }
 
 export default function App() {
-  const [theme, setTheme] = useState<ThemeName>(() => {
-    const cached = localStorage.getItem("trpg-theme");
-    return cached === "parchment" || cached === "nightwatch" || cached === "neon" ? cached : "parchment";
-  });
+  const [theme, setTheme] = useState<ThemeName>("parchment");
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [catalogError, setCatalogError] = useState("");
   const [loadingCatalog, setLoadingCatalog] = useState(true);
-  const [playerName, setPlayerName] = useState("玩家");
+  const [playerName, setPlayerName] = useState("Player");
   const [selectedRule, setSelectedRule] = useState("");
   const [selectedStory, setSelectedStory] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState(localStorage.getItem("trpg-language") ?? "zh-CN");
   const [maxTurns, setMaxTurns] = useState(12);
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
@@ -283,8 +339,17 @@ export default function App() {
   const [sceneOpen, setSceneOpen] = useState(false);
   const [saveEntries, setSaveEntries] = useState<SaveEntry[]>([]);
   const [selectedSaveFile, setSelectedSaveFile] = useState("");
-  const [agentMonitor, setAgentMonitor] = useState<AgentMonitorState>(emptyAgentMonitor);
+  const [languageUi, setLanguageUi] = useState<Record<string, string> | null>(null);
+  const [agentMonitor, setAgentMonitor] = useState<AgentMonitorState>({
+    dicer: "",
+    npcManager: "",
+    directorState: "",
+    director: "",
+    narrator: "",
+  });
 
+  const uiLanguage = normalizeUiLanguage(selectedLanguage);
+  const text = { ...COPY[uiLanguage], ...(languageUi ?? {}) };
   const messageListRef = useRef<HTMLElement | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -295,47 +360,48 @@ export default function App() {
   const stories = selectedRuleEntry?.stories ?? [];
   const selectedStoryEntry = useMemo<StoryOption | undefined>(
     () => stories.find((story) => story.story_code === selectedStory),
-    [selectedStory, stories]
+    [stories, selectedStory]
+  );
+  const selectedLanguageEntry = useMemo<LanguageOption | undefined>(
+    () => catalog?.languages.find((language) => language.code === selectedLanguage),
+    [catalog, selectedLanguage]
   );
   const filteredMessages = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return messages;
     return messages.filter((message) => message.content.toLowerCase().includes(keyword));
   }, [messages, search]);
-  const canStartSession = Boolean(selectedRule && selectedStory) && !startingSession && !submittingTurn;
-  const canSend = input.trim().length > 0 && !startingSession && !submittingTurn && Boolean(session) && !session.is_finished;
-  const status = useMemo(() => buildStatus(session), [session]);
-
-  const refreshSaves = async () => {
-    try {
-      const response = await listSaves();
-      setSaveEntries(response.saves);
-      setSelectedSaveFile((current) => current || response.saves[0]?.file_name || "");
-    } catch {
-      // Ignore save refresh failure in UI and keep play usable.
-    }
-  };
 
   useEffect(() => {
-    localStorage.setItem("trpg-theme", theme);
-  }, [theme]);
+    localStorage.setItem("trpg-language", selectedLanguage);
+  }, [selectedLanguage]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingCatalog(true);
+    fetchLanguagePack(selectedLanguage)
+      .then((pack) => {
+        if (!cancelled) setLanguageUi(pack.ui);
+      })
+      .catch(() => {
+        if (!cancelled) setLanguageUi(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLanguage]);
+
+  useEffect(() => {
+    let cancelled = false;
     fetchCatalog()
       .then((data) => {
         if (cancelled) return;
         setCatalog(data);
-        setCatalogError("");
-        const firstRule = data.rules[0];
-        if (!firstRule) return;
-        setSelectedRule((current) => current || firstRule.rule_code);
-        setSelectedStory((current) => current || firstRule.stories[0]?.story_code || "");
+        setSelectedRule((current) => current || data.rules[0]?.rule_code || "");
+        setSelectedStory((current) => current || data.rules[0]?.stories[0]?.story_code || "");
       })
       .catch((error) => {
         if (cancelled) return;
-        setCatalogError(error instanceof Error ? error.message : "无法加载规则与剧本列表");
+        setCatalogError(error instanceof Error ? error.message : "Catalog error");
       })
       .finally(() => {
         if (!cancelled) setLoadingCatalog(false);
@@ -346,128 +412,103 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void refreshSaves();
+    void listSaves()
+      .then((response) => {
+        setSaveEntries(response.saves);
+        setSelectedSaveFile((current) => current || response.saves[0]?.file_name || "");
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    if (!selectedRuleEntry) return;
-    if (!stories.some((story) => story.story_code === selectedStory)) {
-      setSelectedStory(stories[0]?.story_code ?? "");
-    }
-  }, [selectedRuleEntry, selectedStory, stories]);
-
-  useEffect(() => {
     messageListRef.current?.scrollTo({ top: messageListRef.current.scrollHeight, behavior: "smooth" });
-  }, [filteredMessages, startingSession, submittingTurn]);
+  }, [filteredMessages]);
 
   useEffect(() => {
     return () => {
       const sessionId = sessionIdRef.current;
-      if (!sessionId) return;
-      void deleteSession(sessionId).catch(() => undefined);
+      if (sessionId) void deleteSession(sessionId).catch(() => undefined);
     };
   }, []);
 
   const resetForNewSession = async () => {
     const oldSessionId = sessionIdRef.current;
-    if (oldSessionId) {
-      await deleteSession(oldSessionId).catch(() => undefined);
-    }
+    if (oldSessionId) await deleteSession(oldSessionId).catch(() => undefined);
     sessionIdRef.current = null;
     setSession(null);
   };
 
   const handleStartSession = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canStartSession) return;
+    if (!selectedRule || !selectedStory || !selectedLanguage) return;
 
     setStartingSession(true);
     setOperationError("");
-    setAgentMonitor(emptyAgentMonitor);
-    setSummaryOpen(false);
+    setMessages([createMessage("system", text.createProgress)]);
+    setAgentMonitor({ dicer: "", npcManager: "", directorState: "", director: "", narrator: "" });
 
     try {
       await resetForNewSession();
-      setMessages([createMessage("system", "正在创建会话并生成开场，请稍候...")]);
-
-      let readySession: SessionResponse | null = null;
       await streamCreateSession(
         {
           rule_code: selectedRule,
           story_code: selectedStory,
-          player_name: playerName.trim() || "玩家",
+          player_name: playerName.trim() || text.player,
+          language_code: selectedLanguage,
           max_turns: maxTurns,
         },
         (streamEvent) => {
           if (streamEvent.event === "runtime_log") {
-            setMessages((current) =>
-              hasMessageContent(current, streamEvent.message) ? current : [...current, createMessage("system", streamEvent.message)]
-            );
+            setMessages((current) => [...current, createMessage("system", streamEvent.message)]);
             return;
           }
-
-          if (streamEvent.event === "session_ready") {
-            readySession = streamEvent.session;
-            sessionIdRef.current = streamEvent.session.session_id;
-            setSession(streamEvent.session);
-            setMessages((current) => {
-              const next = [...current, createMessage("system", `会话已创建：${streamEvent.session.state.scenario.title || streamEvent.session.story_code}`)];
-              const history = transcriptToMessages(streamEvent.session.transcript);
-              return [...next, ...history];
+          if (streamEvent.event === "agent_update") {
+            const summary = summarizeAgentEvent(streamEvent);
+            setAgentMonitor((current) => {
+              if (streamEvent.agent_name === "dicer") return { ...current, dicer: summary };
+              if (streamEvent.agent_name === "npc_manager") return { ...current, npcManager: summary };
+              if (streamEvent.agent_name === "director_state") return { ...current, directorState: summary };
+              if (streamEvent.agent_name === "director") return { ...current, director: summary };
+              return current;
             });
             return;
           }
-
+          if (streamEvent.event === "session_ready") {
+            sessionIdRef.current = streamEvent.session.session_id;
+            setSession(streamEvent.session);
+            setSelectedLanguage(streamEvent.session.language_code);
+            setMessages((current) => [
+              ...current,
+              createMessage("system", `${text.sessionCreated}: ${streamEvent.session.state.scenario.title || streamEvent.session.story_code}`),
+              ...transcriptToMessages(streamEvent.session.transcript),
+            ]);
+            return;
+          }
           throw new Error(streamEvent.error);
         }
       );
-
-      if (!readySession) {
-        throw new Error("会话创建未返回最终结果");
-      }
-
-      setInput("");
-      await refreshSaves();
     } catch (error) {
-      setOperationError(error instanceof Error ? error.message : "创建会话失败");
+      setOperationError(error instanceof Error ? error.message : text.processing);
     } finally {
       setStartingSession(false);
     }
   };
 
   const sendMessage = async (rawText: string) => {
-    const trimmed = rawText.trim();
-    const activeSession = session;
-    if (!trimmed || !activeSession || submittingTurn || activeSession.is_finished) return;
-
+    if (!session || !rawText.trim()) return;
     setSubmittingTurn(true);
     setOperationError("");
-    setAgentMonitor((current) => ({
-      ...current,
-      dicer: "正在判定...",
-      npcManager: "正在处理 NPC 反应...",
-      director: "等待本回合结束...",
-      narrator: "",
-    }));
 
-    const playerMessage = createMessage("player", trimmed);
+    const playerMessage = createMessage("player", rawText.trim());
     const aiMessage = createMessage("ai", "");
     setMessages((current) => [...current, playerMessage, aiMessage]);
 
     try {
-      let finalSession: SessionResponse | null = null;
-      let finalNarration = "";
-      let turnStartLogged = false;
-
-      await streamTurn(activeSession.session_id, trimmed, (event) => {
+      await streamTurn(session.session_id, rawText.trim(), (event) => {
         if (event.event === "turn_start") {
-          if (!turnStartLogged) {
-            turnStartLogged = true;
-            setMessages((current) => [...current, createMessage("system", "正在推进回合，主持人开始组织叙事...")]);
-          }
+          setMessages((current) => [...current, createMessage("system", text.turnProgress)]);
           return;
         }
-
         if (event.event === "agent_update") {
           const summary = summarizeAgentEvent(event);
           setAgentMonitor((current) => {
@@ -479,61 +520,31 @@ export default function App() {
           });
           return;
         }
-
         if (event.event === "narration_chunk") {
-          finalNarration += event.delta;
-          setMessages((current) => updateMessageContent(current, aiMessage.id, finalNarration));
-          setAgentMonitor((current) => ({ ...current, narrator: finalNarration || "正在生成..." }));
+          setMessages((current) => updateMessageContent(current, aiMessage.id, current.find((item) => item.id === aiMessage.id)?.content + event.delta || event.delta));
           return;
         }
-
         if (event.event === "turn_result") {
-          finalSession = event.session;
-          finalNarration = event.turn.narration;
-          sessionIdRef.current = event.session.session_id;
           setSession(event.session);
-          setMessages((current) => updateMessageContent(current, aiMessage.id, finalNarration));
+          setSelectedLanguage(event.session.language_code);
+          setMessages((current) => updateMessageContent(current, aiMessage.id, event.turn.narration));
           setAgentMonitor((current) => ({
             ...current,
-            dicer: event.turn.dicer_result ? formatJsonBlock(event.turn.dicer_result) : current.dicer,
-            npcManager: event.turn.npc_result ? formatJsonBlock(event.turn.npc_result) : current.npcManager,
-            directorState: event.turn.director_state_used ? formatJsonBlock(event.turn.director_state_used) : current.directorState,
-            director: event.turn.next_director_result !== undefined ? formatJsonBlock(event.turn.next_director_result) : current.director,
-            narrator: finalNarration,
+            dicer: event.turn.dicer_result ? JSON.stringify(event.turn.dicer_result, null, 2) : current.dicer,
+            npcManager: event.turn.npc_result ? JSON.stringify(event.turn.npc_result, null, 2) : current.npcManager,
+            directorState: event.turn.director_state_used ? JSON.stringify(event.turn.director_state_used, null, 2) : current.directorState,
+            director: event.turn.next_director_result ? JSON.stringify(event.turn.next_director_result, null, 2) : current.director,
+            narrator: event.turn.narration,
           }));
-          if (event.session.is_finished) {
-            setMessages((current) => [...current, createMessage("system", "已达到本局最大对话轮次，请重新开始或先存档。")]);
-          }
+          if (event.session.is_finished) setMessages((current) => [...current, createMessage("system", text.sessionFinished)]);
           return;
         }
-
         throw new Error(event.error);
       });
-
-      if (!finalSession) {
-        throw new Error("流式回合未返回最终结果");
-      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "回合推进失败";
-      setOperationError(message);
-      setMessages((current) => [
-        ...updateMessageContent(current, aiMessage.id, ""),
-        createMessage("system", `本次行动提交失败：${message}`),
-      ]);
+      setOperationError(error instanceof Error ? error.message : text.processing);
     } finally {
       setSubmittingTurn(false);
-    }
-  };
-
-  const handleSaveSession = async () => {
-    if (!session) return;
-    try {
-      const response = await saveSession(session.session_id);
-      await refreshSaves();
-      setSelectedSaveFile(response.file_name);
-      setMessages((current) => [...current, createMessage("system", `存档完成：${response.file_name}`)]);
-    } catch (error) {
-      setOperationError(error instanceof Error ? error.message : "存档失败");
     }
   };
 
@@ -544,14 +555,20 @@ export default function App() {
       const loaded = await loadSession(selectedSaveFile);
       sessionIdRef.current = loaded.session_id;
       setSession(loaded);
-      setMessages([
-        createMessage("system", `已读档：${selectedSaveFile}`),
-        ...transcriptToMessages(loaded.transcript),
-      ]);
-      setAgentMonitor(emptyAgentMonitor);
-      setInput("");
+      setSelectedLanguage(loaded.language_code);
+      setMessages([createMessage("system", `${text.loadDone}: ${selectedSaveFile}`), ...transcriptToMessages(loaded.transcript)]);
     } catch (error) {
-      setOperationError(error instanceof Error ? error.message : "读档失败");
+      setOperationError(error instanceof Error ? error.message : text.processing);
+    }
+  };
+
+  const handleSaveSession = async () => {
+    if (!session) return;
+    try {
+      const response = await saveSession(session.session_id);
+      setMessages((current) => [...current, createMessage("system", `${text.saveDone}: ${response.file_name}`)]);
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : text.processing);
     }
   };
 
@@ -567,15 +584,15 @@ export default function App() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      setMessages((current) => [...current, createMessage("system", `历史已导出：${exported.fileName}`)]);
+      setMessages((current) => [...current, createMessage("system", `${text.exportDone}: ${exported.fileName}`)]);
     } catch (error) {
-      setOperationError(error instanceof Error ? error.message : "导出历史失败");
+      setOperationError(error instanceof Error ? error.message : text.processing);
     }
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSend) return;
+    if (!input.trim()) return;
     const currentInput = input;
     setInput("");
     void sendMessage(currentInput);
@@ -584,14 +601,20 @@ export default function App() {
   const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      if (!canSend) return;
+      if (!input.trim()) return;
       const currentInput = input;
       setInput("");
       void sendMessage(currentInput);
     }
   };
 
-  const storySummary = session?.opening || selectedStoryEntry?.opening_scene || "选择规则和剧本后，点击“开始会话”生成真实开场。";
+  const themeLabels = {
+    parchment: text.themeParchment,
+    nightwatch: text.themeNightwatch,
+    neon: text.themeNeon,
+  };
+
+  const storySummary = session?.opening || selectedStoryEntry?.opening_scene || text.idle;
 
   return (
     <div className="app-root" data-theme={theme}>
@@ -604,17 +627,11 @@ export default function App() {
         <header className="app-header app-card">
           <div>
             <p className="eyebrow">AI TRPG MANAGER</p>
-            <h1>Direct Play 控制台</h1>
+            <h1>{text.title}</h1>
           </div>
-          <div className="theme-switcher" role="tablist" aria-label="主题切换">
+          <div className="theme-switcher" role="tablist" aria-label="Theme switcher">
             {(Object.keys(themeLabels) as ThemeName[]).map((themeName) => (
-              <button
-                key={themeName}
-                type="button"
-                className={theme === themeName ? "active" : ""}
-                onClick={() => setTheme(themeName)}
-                aria-pressed={theme === themeName}
-              >
+              <button key={themeName} type="button" className={theme === themeName ? "active" : ""} onClick={() => setTheme(themeName)}>
                 {themeLabels[themeName]}
               </button>
             ))}
@@ -625,14 +642,14 @@ export default function App() {
           <aside className="sidebar app-card">
             <div className="sidebar-scroll">
               <section className="status-card config-card">
-                <h3>玩家配置</h3>
+                <h3>{text.playerConfig}</h3>
                 <form className="session-form" onSubmit={handleStartSession}>
                   <label>
-                    玩家名
-                    <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} maxLength={24} />
+                    {text.playerName}
+                    <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} />
                   </label>
                   <label>
-                    规则
+                    {text.rule}
                     <select value={selectedRule} onChange={(event) => setSelectedRule(event.target.value)} disabled={loadingCatalog || startingSession}>
                       {catalog?.rules.map((rule) => (
                         <option key={rule.rule_code} value={rule.rule_code}>
@@ -642,86 +659,66 @@ export default function App() {
                     </select>
                   </label>
                   <label>
-                    剧本
-                    <select
-                      value={selectedStory}
-                      onChange={(event) => setSelectedStory(event.target.value)}
-                      disabled={loadingCatalog || startingSession || stories.length === 0}
-                    >
+                    {text.story}
+                    <select value={selectedStory} onChange={(event) => setSelectedStory(event.target.value)} disabled={loadingCatalog || startingSession}>
                       {stories.map((story) => (
-                        <option key={story.story_code} value={story.story_code} title={story.title || story.story_code}>
+                        <option key={story.story_code} value={story.story_code}>
                           {truncateStoryTitle(story)}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label>
-                    最大对话轮次
+                    {text.language}
+                    <select value={selectedLanguage} onChange={(event) => setSelectedLanguage(event.target.value)} disabled={loadingCatalog || startingSession}>
+                      {catalog?.languages.map((language) => (
+                        <option key={language.code} value={language.code}>
+                          {getLanguageLabel(language)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {text.turns}
                     <input type="number" min={1} max={200} value={maxTurns} onChange={(event) => setMaxTurns(Number(event.target.value) || 1)} />
                   </label>
+                  {selectedLanguageEntry ? <p className="form-note">{selectedLanguageEntry.prompt_localized ? text.localizedPrompt : text.fallbackPrompt}</p> : null}
                   <div className="session-form-actions">
-                    <button type="submit" disabled={!canStartSession}>
-                      {startingSession ? "创建中..." : session ? "重新开始" : "开始会话"}
-                    </button>
+                    <button type="submit">{startingSession ? text.creating : session ? text.restart : text.start}</button>
                   </div>
                 </form>
-                {loadingCatalog ? <p className="form-note">正在读取可用规则与剧本...</p> : null}
-                {catalogError ? <p className="form-note error">列表加载失败：{catalogError}</p> : null}
-                {operationError ? <p className="form-note error">操作失败：{operationError}</p> : null}
+                {loadingCatalog ? <p className="form-note">{text.loading}</p> : null}
+                {catalogError ? <p className="form-note error">{catalogError}</p> : null}
+                {operationError ? <p className="form-note error">{operationError}</p> : null}
               </section>
 
-              <PanelSection title="开场摘要" open={summaryOpen} onToggle={() => setSummaryOpen((value) => !value)}>
+              <Panel title={text.opening} open={summaryOpen} onToggle={() => setSummaryOpen((value) => !value)} toggleText={summaryOpen ? text.collapse : text.expand}>
                 <div className="story-rich-text compact">{renderRichText(storySummary)}</div>
-              </PanelSection>
+              </Panel>
 
-              <PanelSection title="当前状态" open={statusOpen} onToggle={() => setStatusOpen((value) => !value)}>
-                <ul className="compact-status-list">
-                  {status.map((item) => (
-                    <li key={item.key}>
-                      <span>{item.key}</span>
-                      <strong>{item.value}</strong>
-                    </li>
-                  ))}
-                </ul>
-              </PanelSection>
+              <Panel title={text.status} open={statusOpen} onToggle={() => setStatusOpen((value) => !value)} toggleText={statusOpen ? text.collapse : text.expand}>
+                <div className="panel-body">
+                  <p>{session?.state.scene.location || text.none}</p>
+                  <p>{session ? `${session.turns_remaining}/${session.max_turns}` : "-"}</p>
+                </div>
+              </Panel>
 
-              <PanelSection title="场景详情" open={sceneOpen} onToggle={() => setSceneOpen((value) => !value)}>
-                <ul className="compact-status-list">
-                  <li>
-                    <span>时间</span>
-                    <strong>
-                      {session
-                        ? `第 ${session.state.game_time.day} 天 ${String(session.state.game_time.hour).padStart(2, "0")}:${String(
-                            session.state.game_time.minute
-                          ).padStart(2, "0")}`
-                        : "-"}
-                    </strong>
-                  </li>
-                  <li>
-                    <span>场景描述</span>
-                    <strong>{session?.state.scene.description || "等待开场"}</strong>
-                  </li>
-                  <li>
-                    <span>可交互</span>
-                    <strong>{session ? toJoinedValue(session.state.scene.interactive_objects) : "-"}</strong>
-                  </li>
-                  <li>
-                    <span>近期事件</span>
-                    <strong>{session ? toJoinedValue(session.state.recent_events) : "-"}</strong>
-                  </li>
-                </ul>
-              </PanelSection>
+              <Panel title={text.scene} open={sceneOpen} onToggle={() => setSceneOpen((value) => !value)} toggleText={sceneOpen ? text.collapse : text.expand}>
+                <div className="panel-body">
+                  <p>{session?.state.scene.description || text.none}</p>
+                </div>
+              </Panel>
             </div>
           </aside>
 
           <section className="chat app-card">
             <header className="chat-toolbar">
-              <strong>会话记录</strong>
+              <strong>{text.title}</strong>
               <div className="chat-toolbar-actions">
                 <label className="save-select">
-                  <span>存档</span>
+                  <span>{text.save}</span>
                   <select value={selectedSaveFile} onChange={(event) => setSelectedSaveFile(event.target.value)}>
-                    <option value="">选择存档</option>
+                    <option value="">{text.selectSave}</option>
                     {saveEntries.map((entry) => (
                       <option key={entry.file_name} value={entry.file_name}>
                         {entry.file_name}
@@ -730,17 +727,17 @@ export default function App() {
                   </select>
                 </label>
                 <button type="button" className="toolbar-btn" onClick={() => void handleSaveSession()} disabled={!session}>
-                  存档
+                  {text.save}
                 </button>
                 <button type="button" className="toolbar-btn" onClick={() => void handleLoadSession()} disabled={!selectedSaveFile}>
-                  读档
+                  {text.load}
                 </button>
                 <button type="button" className="toolbar-btn" onClick={() => void handleExportHistory()} disabled={!session}>
-                  导出历史
+                  {text.export}
                 </button>
                 <label>
-                  搜索
-                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="关键词过滤" />
+                  {text.search}
+                  <input value={search} onChange={(event) => setSearch(event.target.value)} />
                 </label>
               </div>
             </header>
@@ -749,11 +746,10 @@ export default function App() {
               {filteredMessages.length === 0 ? (
                 <article className="chat-bubble system">
                   <header>
-                    <strong>系统提示</strong>
-                    <span>待机</span>
+                    <strong>{text.system}</strong>
                   </header>
                   <div className="chat-bubble-body">
-                    <p>先在左侧选择规则、剧本和最大对话轮次，然后开始会话。</p>
+                    <p>{text.idle}</p>
                   </div>
                 </article>
               ) : null}
@@ -761,8 +757,7 @@ export default function App() {
               {filteredMessages.map((message) => (
                 <article key={message.id} className={`chat-bubble ${message.role}`}>
                   <header>
-                    <strong>{message.role === "player" ? "玩家" : message.role === "ai" ? "主持人" : "系统"}</strong>
-                    <span>{formatTime(message.createdAt)}</span>
+                    <strong>{message.role === "player" ? text.player : message.role === "ai" ? text.narrator : text.system}</strong>
                   </header>
                   <div className="chat-bubble-body">{renderRichText(message.content)}</div>
                 </article>
@@ -771,11 +766,11 @@ export default function App() {
               {(startingSession || submittingTurn) && (
                 <article className="chat-bubble ai typing">
                   <header>
-                    <strong>主持人</strong>
-                    <span>处理中</span>
+                    <strong>{text.narrator}</strong>
+                    <span>{text.processing}</span>
                   </header>
                   <div className="chat-bubble-body">
-                    <p>{startingSession ? "正在生成开场叙事..." : "正在推进当前行动..."}</p>
+                    <p>{startingSession ? text.createProgress : text.turnProgress}</p>
                   </div>
                 </article>
               )}
@@ -783,22 +778,21 @@ export default function App() {
 
             <form onSubmit={handleSubmit} className="composer">
               <textarea
-                id="player-input"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleInputKeyDown}
-                placeholder="行动示例：进入大厅观察壁画，询问守卫昨晚发生了什么"
+                placeholder={text.placeholder}
                 rows={4}
                 disabled={!session || session.is_finished || startingSession}
               />
               <div className="composer-footer">
-                <span>{session ? `当前 ${session.turns_used}/${session.max_turns} 轮` : "请先开始会话"}</span>
+                <span>{session ? `${session.turns_used}/${session.max_turns}` : text.startFirst}</span>
                 <div className="composer-actions">
                   <button type="button" onClick={() => setInput("")}>
-                    清空
+                    {text.clear}
                   </button>
-                  <button type="submit" disabled={!canSend}>
-                    {submittingTurn ? "发送中..." : "发送"}
+                  <button type="submit" disabled={!session || submittingTurn}>
+                    {submittingTurn ? text.sending : text.send}
                   </button>
                 </div>
               </div>
@@ -807,8 +801,8 @@ export default function App() {
 
           <aside className="agent-sidebar app-card">
             <header className="agent-header">
-              <strong>Agent Monitor</strong>
-              <span>实时输出</span>
+              <strong>{text.monitor}</strong>
+              <span>{text.live}</span>
             </header>
             <div className="agent-scroll">
               <section className="agent-card">

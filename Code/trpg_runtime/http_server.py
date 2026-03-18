@@ -20,6 +20,7 @@ if str(CODE_ROOT) not in sys.path:
     sys.path.insert(0, str(CODE_ROOT))
 
 from trpg_runtime import GameState, MinimalTRPGEngine, PromptRepository, RuntimeOptions
+from trpg_runtime.language_support import build_language_options_payload, get_language_pack_payload, normalize_language_code
 
 SAVE_ROOT = REPO_ROOT / "Save"
 SESSION_SAVE_DIR = SAVE_ROOT / "session_saves"
@@ -124,6 +125,7 @@ class SessionRecord:
     rule_code: str
     story_code: str
     player_name: str
+    language_code: str
     max_turns: int
     opening: str
     created_at: float
@@ -306,6 +308,76 @@ def _serialize_session(record: SessionRecord) -> dict[str, Any]:
         "rule_code": record.rule_code,
         "story_code": record.story_code,
         "player_name": record.player_name,
+        "language_code": record.language_code,
+        "max_turns": record.max_turns,
+        "turns_used": record.turns_used,
+        "turns_remaining": record.turns_remaining,
+        "is_finished": record.is_finished,
+        "opening": record.opening,
+        "state": _serialize_state_summary(record.engine.state),
+        "transcript": _serialize_transcript(record),
+    }
+
+
+def _serialize_transcript_text(record: SessionRecord) -> str:
+    player_label = "玩家"
+    narrator_label = "主持人"
+    normalized_language = normalize_language_code(record.language_code)
+    if normalized_language == "en":
+        player_label = "Player"
+        narrator_label = "Narrator"
+    elif normalized_language == "ja":
+        player_label = "プレイヤー"
+        narrator_label = "ナレーター"
+
+    lines: list[str] = [
+        f"Session ID: {record.session_id}",
+        f"Rule: {record.rule_code}",
+        f"Story: {record.story_code}",
+        f"Player: {record.player_name}",
+        "",
+    ]
+    for item in record.transcript:
+        role = str(item.get("role", "")).strip()
+        if role not in {"player", "ai"}:
+            continue
+        speaker = player_label if role == "player" else narrator_label
+        content = str(item.get("content", "")).strip()
+        if not content:
+            continue
+        lines.append(f"[{speaker}]")
+        lines.append(content)
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _serialize_save_payload(record: SessionRecord) -> dict[str, Any]:
+    return {
+        "version": 2,
+        "saved_at": dt.datetime.now().isoformat(timespec="seconds"),
+        "session": {
+            "session_id": record.session_id,
+            "rule_code": record.rule_code,
+            "story_code": record.story_code,
+            "player_name": record.player_name,
+            "language_code": record.language_code,
+            "max_turns": record.max_turns,
+            "opening": record.opening,
+            "created_at": record.created_at,
+            "options": asdict(record.options),
+            "state": record.engine.state.model_dump(mode="python"),
+            "transcript": _serialize_transcript(record),
+        },
+    }
+
+
+def _serialize_session(record: SessionRecord) -> dict[str, Any]:
+    return {
+        "session_id": record.session_id,
+        "rule_code": record.rule_code,
+        "story_code": record.story_code,
+        "player_name": record.player_name,
+        "language_code": record.language_code,
         "max_turns": record.max_turns,
         "turns_used": record.turns_used,
         "turns_remaining": record.turns_remaining,
@@ -329,6 +401,7 @@ class TRPGServer(ThreadingHTTPServer):
         self.repo = PromptRepository()
         self.sessions = SessionStore()
         self.catalog = _build_catalog(self.repo)
+        self.language_options = build_language_options_payload()
         self.preference_path = preference_path
         self.registry_path = registry_path
 
@@ -360,7 +433,11 @@ class TRPGHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/trpg/catalog":
-            _json_response(self, {"rules": self.app.catalog})
+            _json_response(self, {"rules": self.app.catalog, "languages": self.app.language_options})
+            return
+
+        if len(parts := [part for part in path.split("/") if part]) == 4 and parts[:3] == ["api", "trpg", "language"]:
+            _json_response(self, get_language_pack_payload(parts[3]))
             return
 
         if path == "/api/trpg/saves":
@@ -460,6 +537,11 @@ class TRPGHandler(BaseHTTPRequestHandler):
             options=options,
         )
         opening = engine.generate_opening()
+        try:
+            engine.initialize_opening_npc_manager(opening)
+        except Exception:
+            # Keep session creation resilient if opening-time NPC initialization fails.
+            pass
         session_id = uuid.uuid4().hex[:12]
         record = SessionRecord(
             session_id=session_id,
@@ -528,6 +610,29 @@ class TRPGHandler(BaseHTTPRequestHandler):
                     },
                 )
             )
+            try:
+                opening_npc_result = engine.initialize_opening_npc_manager(
+                    opening,
+                    event_callback=lambda event: _stream_response_write(
+                        self,
+                        {
+                            "event": "runtime_log",
+                            "phase": event.phase,
+                            "stage": event.stage,
+                            "message": event.message,
+                        },
+                    ),
+                )
+                _stream_response_write(
+                    self,
+                    {
+                        "event": "agent_update",
+                        "agent_name": "npc_manager",
+                        "payload": opening_npc_result.model_dump(mode="python"),
+                    },
+                )
+            except Exception:
+                opening_npc_result = None
             session_id = uuid.uuid4().hex[:12]
             record = SessionRecord(
                 session_id=session_id,
@@ -765,6 +870,235 @@ class TRPGHandler(BaseHTTPRequestHandler):
             rule_code=rule_code,
             story_code=story_code,
             player_name=player_name,
+            max_turns=max_turns,
+            opening=opening,
+            created_at=float(session_payload.get("created_at", time.time())),
+            lock=threading.RLock(),
+            options=options,
+            transcript=transcript,
+        )
+        self.app.sessions.create(record)
+        _json_response(self, _serialize_session(record))
+
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+
+        if path in ("", "/health"):
+            _json_response(
+                self,
+                {
+                    "ok": True,
+                    "service": "ai-trpg",
+                    "catalog_size": len(self.app.catalog),
+                    "session_count": len(self.app.sessions._sessions),
+                },
+            )
+            return
+
+        if path == "/api/trpg/catalog":
+            _json_response(self, {"rules": self.app.catalog, "languages": self.app.language_options})
+            return
+
+        if path == "/api/trpg/saves":
+            _json_response(self, {"saves": _list_save_entries()})
+            return
+
+        parts = [part for part in path.split("/") if part]
+        if len(parts) == 6 and parts[:3] == ["api", "trpg", "session"] and parts[4:] == ["history", "export"]:
+            self._export_history(parts[3])
+            return
+
+        if len(parts) == 4 and parts[:3] == ["api", "trpg", "session"] and parts[3]:
+            record = self.app.sessions.get(parts[3])
+            if record is None:
+                _json_response(self, {"error": "Session not found"}, status=HTTPStatus.NOT_FOUND)
+                return
+            with record.lock:
+                _json_response(self, _serialize_session(record))
+            return
+
+        _json_response(self, {"error": "Not Found"}, status=HTTPStatus.NOT_FOUND)
+
+    def _create_session(self) -> None:
+        payload = _read_json_request(self)
+        rule_code = _coerce_str(payload.get("rule_code"), default="DET").upper()
+        story_code = _coerce_str(payload.get("story_code"), default="")
+        player_name = _coerce_str(payload.get("player_name"), default="玩家")
+        language_code = normalize_language_code(_coerce_str(payload.get("language_code"), default="zh-CN"))
+        max_turns = _coerce_int(payload.get("max_turns"), default=12, minimum=1, maximum=200)
+
+        if not story_code:
+            raise ValueError("story_code is required")
+
+        options = RuntimeOptions(
+            max_dialogue_window=_coerce_int(payload.get("max_dialogue_window"), default=5, minimum=1, maximum=20)
+        )
+        engine = MinimalTRPGEngine.from_prompt_files(
+            rule_code=rule_code,
+            story_code=story_code,
+            player_name=player_name,
+            preference_path=self.app.preference_path,
+            registry_path=self.app.registry_path,
+            options=options,
+            language_code=language_code,
+        )
+        opening = engine.generate_opening()
+        try:
+            engine.initialize_opening_npc_manager(opening)
+        except Exception:
+            pass
+        session_id = uuid.uuid4().hex[:12]
+        record = SessionRecord(
+            session_id=session_id,
+            engine=engine,
+            rule_code=rule_code,
+            story_code=story_code,
+            player_name=player_name,
+            language_code=language_code,
+            max_turns=max_turns,
+            opening=opening,
+            created_at=time.time(),
+            lock=threading.RLock(),
+            options=options,
+            transcript=[{"role": "ai", "content": opening, "created_at": time.time()}],
+        )
+        self.app.sessions.create(record)
+        _json_response(self, _serialize_session(record), status=HTTPStatus.CREATED)
+
+    def _stream_create_session(self) -> None:
+        payload = _read_json_request(self)
+        rule_code = _coerce_str(payload.get("rule_code"), default="DET").upper()
+        story_code = _coerce_str(payload.get("story_code"), default="")
+        player_name = _coerce_str(payload.get("player_name"), default="玩家")
+        language_code = normalize_language_code(_coerce_str(payload.get("language_code"), default="zh-CN"))
+        max_turns = _coerce_int(payload.get("max_turns"), default=12, minimum=1, maximum=200)
+
+        if not story_code:
+            raise ValueError("story_code is required")
+
+        _stream_response_start(self)
+        _stream_response_write(
+            self,
+            {
+                "event": "runtime_log",
+                "phase": "session",
+                "stage": "load_scenario",
+                "message": f"[Session] Loading {rule_code}/{story_code}...",
+            },
+        )
+
+        options = RuntimeOptions(
+            max_dialogue_window=_coerce_int(payload.get("max_dialogue_window"), default=5, minimum=1, maximum=20)
+        )
+        engine = MinimalTRPGEngine.from_prompt_files(
+            rule_code=rule_code,
+            story_code=story_code,
+            player_name=player_name,
+            preference_path=self.app.preference_path,
+            registry_path=self.app.registry_path,
+            options=options,
+            language_code=language_code,
+        )
+
+        try:
+            opening = engine.generate_opening(
+                event_callback=lambda event: _stream_response_write(
+                    self,
+                    {
+                        "event": "runtime_log",
+                        "phase": event.phase,
+                        "stage": event.stage,
+                        "message": event.message,
+                    },
+                )
+            )
+            try:
+                opening_npc_result = engine.initialize_opening_npc_manager(
+                    opening,
+                    event_callback=lambda event: _stream_response_write(
+                        self,
+                        {
+                            "event": "runtime_log",
+                            "phase": event.phase,
+                            "stage": event.stage,
+                            "message": event.message,
+                        },
+                    ),
+                )
+                _stream_response_write(
+                    self,
+                    {
+                        "event": "agent_update",
+                        "agent_name": "npc_manager",
+                        "payload": opening_npc_result.model_dump(mode="python"),
+                    },
+                )
+            except Exception:
+                pass
+            session_id = uuid.uuid4().hex[:12]
+            record = SessionRecord(
+                session_id=session_id,
+                engine=engine,
+                rule_code=rule_code,
+                story_code=story_code,
+                player_name=player_name,
+                language_code=language_code,
+                max_turns=max_turns,
+                opening=opening,
+                created_at=time.time(),
+                lock=threading.RLock(),
+                options=options,
+                transcript=[{"role": "ai", "content": opening, "created_at": time.time()}],
+            )
+            self.app.sessions.create(record)
+            _stream_response_write(self, {"event": "session_ready", "session": _serialize_session(record)})
+        except Exception as exc:
+            engine.shutdown(wait=False)
+            _stream_response_write(self, {"event": "error", "error": str(exc)})
+
+    def _load_session(self) -> None:
+        payload = _read_json_request(self)
+        file_name = _coerce_str(payload.get("file_name"), default="")
+        if not file_name:
+            raise ValueError("file_name is required")
+
+        path = SESSION_SAVE_DIR / Path(file_name).name
+        if not path.exists():
+            _json_response(self, {"error": "Save file not found"}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        session_payload = raw.get("session", {})
+        rule_code = str(session_payload.get("rule_code", "")).upper()
+        story_code = str(session_payload.get("story_code", "")).strip()
+        player_name = str(session_payload.get("player_name", "玩家")).strip() or "玩家"
+        language_code = normalize_language_code(str(session_payload.get("language_code", "zh-CN")).strip() or "zh-CN")
+        max_turns = int(session_payload.get("max_turns", 12))
+        opening = str(session_payload.get("opening", "")).strip()
+        options = RuntimeOptions(**dict(session_payload.get("options", {})))
+        state = GameState.model_validate(session_payload.get("state", {}))
+        transcript = list(session_payload.get("transcript", []))
+
+        repo = self.app.repo
+        scenario = repo.load_scenario(rule_code=rule_code, story_code=story_code, language_code=language_code)
+        engine = MinimalTRPGEngine(
+            scenario=scenario,
+            state=state,
+            prompt_repository=repo,
+            preference_path=self.app.preference_path,
+            registry_path=self.app.registry_path,
+            options=options,
+            language_code=language_code,
+        )
+        session_id = str(session_payload.get("session_id") or uuid.uuid4().hex[:12])
+        record = SessionRecord(
+            session_id=session_id,
+            engine=engine,
+            rule_code=rule_code,
+            story_code=story_code,
+            player_name=player_name,
+            language_code=language_code,
             max_turns=max_turns,
             opening=opening,
             created_at=float(session_payload.get("created_at", time.time())),
