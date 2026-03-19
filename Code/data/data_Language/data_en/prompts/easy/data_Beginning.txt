@@ -1,0 +1,64 @@
+The following is an API prompt control instruction used to generate the third message, ensuring it meets your required structure and content logic:
+
+Parameter Description:
+
+Existing Information:
+
+First message (system): Defines the game rules for this TRPG session (e.g., VHS rules).
+
+Second message (assistant): Provides the background story (script).
+
+Generation Requirements:
+
+Game Rules Summary:
+Based on the system content from the first message, briefly restate the rule type in 1–2 sentences (e.g., “This session uses the ‘VHS’ horror role-playing rules, emphasizing immersive narrative and fear-driven decisions”), then explain the worldview in 1–2 sentences, including whether supernatural abilities exist or other key elements.
+
+Background Story Overview:
+Based on the assistant content from the second message, extract the era, core conflict, and the reason players enter the story, and summarize them in 3–4 sentences. If the player has not created a character, add a prompt at the end: “Please describe your character background (e.g., profession, special items) to start the game.” If the character is already created, briefly integrate the character into the narrative (e.g., “As investigative journalist Lin Xia, you arrive in Kyoto carrying an old camera and a protective charm”). Avoid excessive spoilers.
+
+Game Objectives:
+Clearly define the player’s core objective (e.g., “Investigate the connection between the mysterious letter and the cursed teahouse”) and survival objective (e.g., “Survive the supernatural threats in midnight Kyoto until dawn”), ensuring logical alignment with the script while avoiding spoilers. Do not explicitly reveal specific threats (e.g., if the script includes a “fox spirit,” it should instead be referred to ambiguously as “a mysterious force,” depending on context).
+
+Example Template:
+"This session uses the ‘VHS’ horror RPG rules, driven purely by narrative exploration and decision-making, without complex numerical systems—each of your choices will directly shape the story.",
+"[Background Story] In modern times (2024), you receive a mysterious letter signed ‘Kyoto Gion Anonymous,’ containing a yellowed photograph and a blood-written warning. Upon arriving in Kyoto, you find JR Kyoto Station completely deserted. At midnight, lanterns suddenly illuminate, and the words ‘止まれ’ appear in vermilion on sliding paper doors.",
+"[Game Objectives] ① Uncover the cursed truth behind the abandoned teahouse in the photograph and identify the sender of the letter; ② Survive the supernatural threats of Kyoto’s streets until dawn, avoiding becoming a sacrifice of the ‘Moonlit Night’.",
+"Please confirm your character status or provide additional details: Are you carrying any other items? Do you have any special experiences that may influence the story?"
+
+Key Logic:
+
+Rule Restatement: Only emphasize rule type and core mechanics (e.g., “immersive narrative,” “choice-driven”), without detailed explanation.
+
+Background Extraction: Focus on “why the player is here” (mysterious letter), “environmental anomalies” (empty station, supernatural phenomena), and “character motivation” (e.g., a journalist’s drive to uncover truth).
+
+Objective Structuring: Distinguish between the main objective (investigating the truth) and the survival objective, enhancing urgency.
+
+Interactive Guidance: If no character is created, use open-ended prompts to encourage player input (e.g., “Are you carrying special items?” “Why are you here?”). If a character exists, use a “status confirmation” approach to transition into gameplay.
+
+The following is an example:
+
+Game Rules Summary
+
+This session uses the “VHS Retro Horror Tape” rules, a role-playing system inspired by classic horror films. Players must survive in environments filled with monsters and suspenseful elements, with immersive narrative as the core. There are no complex numerical systems—your choices and actions dynamically drive the story forward, and every decision directly affects its development.
+
+Background Story Overview
+
+[Background Story] In modern times (2024), you receive an anonymous letter signed “Descendant of Yuqing Hall,” stating: “The old house will fall—please come and undo the knot.” After half a day’s drive, you arrive at the remote mountain estate at dusk. The caretaker, Zhou Bo, opens the creaking wooden door, his face lit by a dim oil lamp. Behind him, a fox deity shrine glows faintly in the shadows, and the air is thick with age and unease.
+
+Game Objectives
+
+[Game Objectives]
+
+Uncover the Truth: Investigate the hidden history of the “Yuqing Hall” estate and solve the mystery mentioned in the letter.
+
+Survive Until Dawn: Avoid unknown threats within the estate during the night and find a safe way out.
+
+Character Confirmation
+
+Please describe your character background (e.g., profession, items carried) and relevant details to begin the game. For example:
+
+Are you a folklorist arriving with a recorder and a worn copy of Chinese Mythical Creatures?
+
+Or a distant relative of the Yu family, carrying an ancestral copper key and fragmented family memories?
+
+Please provide additional details to better integrate into the story.

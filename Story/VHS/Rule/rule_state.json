@@ -1,0 +1,22 @@
+{
+  "family": "VHS",
+  "resource_pools": {},
+  "status_effects": [],
+  "tension_meters": {},
+  "unlocked_mechanics": [],
+  "disabled_mechanics": [],
+  "check_history": [],
+  "rule_flags": [],
+  "coc": null,
+  "vhs": {
+    "faith_track": null,
+    "fear_stage": "",
+    "monster_manifest_stage": "",
+    "countdown_tags": []
+  },
+  "det": null,
+  "rom": null,
+  "nihon": null,
+  "adv": null,
+  "generic": null
+}

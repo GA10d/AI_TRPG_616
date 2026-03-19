@@ -132,6 +132,7 @@ class ScenarioBundle:
     rule_text: str
     story_text: str
     beginning_prompt: str
+    beginning_prompt_path: str
     dicer_prompt: str
     npc_manager_prompt: str
     director_prompt: str
@@ -190,12 +191,25 @@ class PromptRepository:
                 result.add(child.name)
         return sorted(result)
 
-    def load_scenario(self, rule_code: str, story_code: str, *, language_code: str | None = None) -> ScenarioBundle:
+    def load_scenario(
+        self,
+        rule_code: str,
+        story_code: str,
+        *,
+        language_code: str | None = None,
+        difficulty_code: str | None = None,
+    ) -> ScenarioBundle:
         normalized_rule = rule_code.upper()
 
         rule_path = self._rule_dir(normalized_rule) / f"{normalized_rule}_PROMPT.txt"
         story_path = self._resolve_story_path(normalized_rule, story_code)
         beginning_path = self._resolve_beginning_prompt_path()
+        resolved_beginning_path = self._resolve_agent_prompt_path(
+            "data_Beginning.txt",
+            language_code=language_code,
+            difficulty_code=difficulty_code,
+            base_path=beginning_path,
+        )
 
         if not rule_path.exists():
             raise FileNotFoundError(rule_path)
@@ -204,11 +218,19 @@ class PromptRepository:
 
         rule_text = _read_text(rule_path)
         story_text = _read_text(story_path)
-        beginning_prompt = _read_text(self._resolve_agent_prompt_path("data_Beginning.txt", language_code=language_code, base_path=beginning_path))
-        dicer_prompt = _read_text(self._resolve_agent_prompt_path("data_Dicer.txt", language_code=language_code))
-        npc_manager_prompt = _read_text(self._resolve_agent_prompt_path("data_NpcManager.txt", language_code=language_code))
-        director_prompt = _read_text(self._resolve_agent_prompt_path("data_Director.txt", language_code=language_code))
-        narrator_prompt = _read_text(self._resolve_agent_prompt_path("data_Narrator.txt", language_code=language_code))
+        beginning_prompt = _read_text(resolved_beginning_path)
+        dicer_prompt = _read_text(
+            self._resolve_agent_prompt_path("data_Dicer.txt", language_code=language_code, difficulty_code=difficulty_code)
+        )
+        npc_manager_prompt = _read_text(
+            self._resolve_agent_prompt_path("data_NpcManager.txt", language_code=language_code, difficulty_code=difficulty_code)
+        )
+        director_prompt = _read_text(
+            self._resolve_agent_prompt_path("data_Director.txt", language_code=language_code, difficulty_code=difficulty_code)
+        )
+        narrator_prompt = _read_text(
+            self._resolve_agent_prompt_path("data_Narrator.txt", language_code=language_code, difficulty_code=difficulty_code)
+        )
 
         return ScenarioBundle(
             rule_code=normalized_rule,
@@ -216,6 +238,7 @@ class PromptRepository:
             rule_text=rule_text,
             story_text=story_text,
             beginning_prompt=beginning_prompt,
+            beginning_prompt_path=str(resolved_beginning_path),
             dicer_prompt=dicer_prompt,
             npc_manager_prompt=npc_manager_prompt,
             director_prompt=director_prompt,
@@ -637,9 +660,10 @@ class PromptRepository:
         file_name: str,
         *,
         language_code: str | None = None,
+        difficulty_code: str | None = None,
         base_path: Path | None = None,
     ) -> Path:
-        localized = get_prompt_path(language_code, file_name)
+        localized = get_prompt_path(language_code, file_name, difficulty_code=difficulty_code)
         if localized is not None:
             return localized
 

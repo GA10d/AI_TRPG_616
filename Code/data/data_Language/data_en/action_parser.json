@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "default_language": "en",
+  "languages": {
+    "en": {
+      "intents": {
+        "investigate": ["inspect", "check", "examine", "look at", "observe", "search", "investigate", "study"],
+        "social": ["ask", "talk", "speak", "persuade", "convince", "threaten", "question", "interrogate", "negotiate"],
+        "combat": ["attack", "hit", "strike", "shoot", "stab", "slash", "punch", "kick"],
+        "movement": ["go to", "move to", "enter", "leave", "approach", "walk to", "run to", "head to"],
+        "stealth": ["sneak", "hide", "stealth", "quietly", "silently", "tail", "eavesdrop"],
+        "use_item": ["use", "open", "light", "draw", "take out", "press", "activate"]
+      },
+      "target_verbs": [
+        "inspect", "check", "examine", "look at", "observe", "search", "investigate",
+        "ask", "talk", "speak",
+        "attack", "hit", "shoot", "stab",
+        "enter", "leave", "approach", "go to", "move to",
+        "use", "open", "light", "activate"
+      ],
+      "tags": {
+        "quiet": ["quietly", "silently", "carefully", "sneak", "stealthily"],
+        "rush": ["quickly", "immediately", "at once", "rush", "suddenly"],
+        "social": ["ask", "talk", "speak", "persuade", "convince", "negotiate"]
+      }
+    }
+  }
+}

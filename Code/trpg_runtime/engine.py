@@ -16,15 +16,18 @@ from tools.function_Preference import load_merged_preferences
 
 from .language_support import (
     build_output_language_instruction,
+    get_action_parser_path,
     get_localized_agent_note,
     get_narrator_language_note,
     get_opening_language_note,
+    normalize_difficulty_code,
     normalize_language_code,
 )
 from .models import (
     AgentRuntimeState,
     ConversationTurnRecord,
     CoreState,
+    DeltaOperation,
     DicerOutput,
     DirectorOutput,
     DirectorState,
@@ -163,9 +166,13 @@ def _normalize_language_code(code: str | None) -> str:
 
 @lru_cache(maxsize=4)
 def _load_action_parser_data(config_path: str | None = None) -> dict[str, object]:
-    config_file = _resolve_code_path(data_path.PATH_DATA_ACTION_PARSER)
+    config_file: Path | None = None
     if config_path:
         config_file = Path(config_path)
+    if config_file is None:
+        config_file = get_action_parser_path(None)
+    if config_file is None:
+        config_file = _resolve_code_path(data_path.PATH_DATA_ACTION_PARSER)
     payload = json.loads(config_file.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise TypeError("Action parser config root must be a dict")
@@ -237,7 +244,11 @@ def _get_action_parser_config(
     config_path: str | None = None,
     language_code: str | None = None,
 ) -> dict[str, object]:
-    payload = _load_action_parser_data(config_path)
+    resolved_config_path = config_path
+    if resolved_config_path is None:
+        path = get_action_parser_path(language_code)
+        resolved_config_path = str(path) if path is not None else None
+    payload = _load_action_parser_data(resolved_config_path)
     default_language, languages = _build_language_lookup(payload)
     preferred_language = language_code or _get_preferred_language_code()
     selected_codes = _resolve_language_variants(preferred_language, set(languages.keys()), default_language)
@@ -565,6 +576,7 @@ class MinimalTRPGEngine:
         registry_path: str | None = None,
         options: RuntimeOptions = RuntimeOptions(),
         language_code: str = "zh-CN",
+        difficulty_code: str = "easy",
     ) -> None:
         self.scenario = scenario
         self.state = self._seed_story_npcs_into_state(state)
@@ -573,6 +585,7 @@ class MinimalTRPGEngine:
         self.registry_path = registry_path
         self.options = options
         self.language_code = normalize_language_code(language_code)
+        self.difficulty_code = normalize_difficulty_code(difficulty_code)
         self._state_lock = threading.RLock()
         self._executor = ThreadPoolExecutor(max_workers=self.options.max_parallel_workers)
         self._pending_director_future: Future[tuple[dict[str, object], DirectorOutput, int]] | None = None
@@ -595,7 +608,13 @@ class MinimalTRPGEngine:
             "name": name,
             "identity": identity or role_hint,
             "description": "；".join(description_parts)[:220],
+            "is_core_npc": True,
             "location": "",
+            "outfit": "",
+            "demeanor": "",
+            "current_mood": "",
+            "physical_status": "",
+            "expression": "",
             "current_goal": "",
             "task_summary": "",
             "last_public_status": "",
@@ -772,6 +791,12 @@ class MinimalTRPGEngine:
                     identity=f"Scenario actor {actor_id}",
                     description="Auto-seeded from scenario state actor reference.",
                     location=state.scene.location,
+                    is_core_npc=True,
+                    outfit="",
+                    demeanor="",
+                    current_mood="",
+                    physical_status="",
+                    expression="",
                     current_goal=f"与当前剧情“{state.scenario.current_stage}”相关。",
                     task_summary=f"围绕当前阶段“{state.scenario.current_stage}”行动。",
                     last_public_status="尚未正式出场。",
@@ -795,6 +820,7 @@ class MinimalTRPGEngine:
         registry_path: str | None = None,
         options: RuntimeOptions = RuntimeOptions(),
         language_code: str = "zh-CN",
+        difficulty_code: str = "easy",
         scene_id: str = "opening",
         location: str | None = None,
         scene_description: str | None = None,
@@ -807,7 +833,12 @@ class MinimalTRPGEngine:
         state_override_path: str | None = None,
     ) -> "MinimalTRPGEngine":
         repo = prompt_repository or PromptRepository()
-        scenario = repo.load_scenario(rule_code=rule_code, story_code=story_code, language_code=language_code)
+        scenario = repo.load_scenario(
+            rule_code=rule_code,
+            story_code=story_code,
+            language_code=language_code,
+            difficulty_code=difficulty_code,
+        )
         state_overrides = repo.load_state_overrides(
             rule_code=rule_code,
             story_code=story_code,
@@ -838,6 +869,7 @@ class MinimalTRPGEngine:
             registry_path=registry_path,
             options=options,
             language_code=language_code,
+            difficulty_code=difficulty_code,
         )
 
     def shutdown(self, *, wait: bool = False) -> None:
@@ -924,13 +956,17 @@ class MinimalTRPGEngine:
             event_callback=event_callback,
             phase="opening",
             stage="build_context",
-            message="[Opening] Building opening prompt context...",
+            message=f"[Opening] Building opening prompt context using Beginning prompt: {self.scenario.beginning_prompt_path}",
             payload={
                 "rule_code": self.scenario.rule_code,
                 "story_code": self.scenario.story_code,
+                "beginning_prompt_path": self.scenario.beginning_prompt_path,
+                "language_code": self.language_code,
+                "difficulty_code": self.difficulty_code,
             },
         )
         messages: list[Message] = [
+            {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=True)},
             {"role": "system", "content": get_opening_language_note(self.language_code)},
             {"role": "system", "content": self.scenario.rule_excerpt(self.options.opening_rule_chars)},
             {"role": "assistant", "content": self.scenario.story_excerpt(self.options.opening_story_chars)},
@@ -987,6 +1023,7 @@ class MinimalTRPGEngine:
         )
         npc_context = self.build_npc_context(opening_action, working_state)
         npc_result = self._call_npc_manager_from_context(npc_context)
+        npc_result = self._with_structured_core_npc_updates(working_state, npc_result)
 
         updated_state = apply_delta(working_state, npc_result.state_delta)
         npc_notes = list(updated_state.agent_runtime.npc_manager_notes)
@@ -1151,6 +1188,7 @@ class MinimalTRPGEngine:
 
         if dicer_result is None or npc_result is None:
             raise RuntimeError("Missing parallel agent result during streamed turn")
+        npc_result = self._with_structured_core_npc_updates(state_before, npc_result)
         yield TurnStreamEvent(
             event="agent_update",
             agent_name="director_state",
@@ -1302,6 +1340,7 @@ class MinimalTRPGEngine:
         npc_future = self._executor.submit(self._call_npc_manager_from_context, npc_context)
         dicer_result = dicer_future.result()
         npc_result = npc_future.result()
+        npc_result = self._with_structured_core_npc_updates(state_before, npc_result)
 
         self._emit_runtime_log(
             progress_callback=progress_callback,
@@ -1930,14 +1969,16 @@ class MinimalTRPGEngine:
         )
 
     def _build_narrator_messages(self, context: dict[str, object]) -> list[Message]:
-        messages: list[Message] = [{"role": "system", "content": self.scenario.narrator_prompt}]
+        messages: list[Message] = [
+            {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=True)},
+            {"role": "system", "content": self.scenario.narrator_prompt},
+        ]
         localized_note = get_localized_agent_note("narrator", self.language_code)
         if localized_note:
             messages.append({"role": "system", "content": localized_note})
         messages.extend(
             [
                 {"role": "system", "content": get_narrator_language_note(self.language_code)},
-                {"role": "system", "content": build_output_language_instruction(self.language_code, plain_text=True)},
                 {
                     "role": "system",
                     "content": (
@@ -2139,3 +2180,56 @@ class MinimalTRPGEngine:
                 is_visible=True,
             )
         return npc_state.model_dump(mode="python")
+
+    @staticmethod
+    def _with_structured_core_npc_updates(
+        state: GameState,
+        npc_result: NPCManagerOutput,
+    ) -> NPCManagerOutput:
+        if not npc_result.core_npc_updates:
+            return npc_result
+
+        derived_delta = list(npc_result.state_delta)
+        tracked_fields = (
+            "appearance",
+            "outfit",
+            "demeanor",
+            "current_mood",
+            "physical_status",
+            "expression",
+            "last_public_status",
+        )
+        existing_set_paths = {
+            operation.path
+            for operation in derived_delta
+            if operation.op == "set"
+        }
+
+        for update in npc_result.core_npc_updates:
+            npc_name = update.npc_name.strip()
+            if not npc_name:
+                continue
+            current_npc = state.npcs.get(npc_name)
+            if current_npc is None:
+                continue
+
+            core_flag_path = f"core.npcs.{npc_name}.is_core_npc"
+            if core_flag_path not in existing_set_paths and not current_npc.is_core_npc:
+                derived_delta.append(DeltaOperation(op="set", path=core_flag_path, value=True))
+                existing_set_paths.add(core_flag_path)
+
+            for field_name in tracked_fields:
+                new_value = getattr(update, field_name, "").strip()
+                if not new_value:
+                    continue
+                if getattr(current_npc, field_name, "").strip() == new_value:
+                    continue
+                path = f"core.npcs.{npc_name}.{field_name}"
+                if path in existing_set_paths:
+                    continue
+                derived_delta.append(DeltaOperation(op="set", path=path, value=new_value))
+                existing_set_paths.add(path)
+
+        if derived_delta == npc_result.state_delta:
+            return npc_result
+        return npc_result.model_copy(update={"state_delta": derived_delta})

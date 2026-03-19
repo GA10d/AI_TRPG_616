@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 JsonScalar = str | int | float | bool | None
@@ -80,6 +80,17 @@ class NPCTimelineNote(BaseModel):
     trigger_reason: str = Field(default="", description="Why this note matters now, such as elapsed task time or scene entry.")
 
 
+class NPCCoreStateUpdate(BaseModel):
+    npc_name: str = Field(description="Core NPC name whose persistent portrayal card should be updated.")
+    appearance: str = Field(default="", description="Stable outward appearance summary to persist when newly established or changed.")
+    outfit: str = Field(default="", description="Current outfit or signature clothing summary to persist when newly established or changed.")
+    demeanor: str = Field(default="", description="Stable outward bearing or manner to persist when newly established or changed.")
+    current_mood: str = Field(default="", description="Current mood baseline to persist when newly established or changed.")
+    physical_status: str = Field(default="", description="Current physical condition to persist when newly established or changed.")
+    expression: str = Field(default="", description="Current visible expression or body language to persist when newly established or changed.")
+    last_public_status: str = Field(default="", description="Current public-facing NPC status summary to persist when newly established or changed.")
+
+
 class NPCManagerOutput(BaseModel):
     visible_npcs_output: list[NPCVisibleBeat] = Field(
         default_factory=list,
@@ -92,6 +103,10 @@ class NPCManagerOutput(BaseModel):
     timeline_notes: list[NPCTimelineNote] = Field(
         default_factory=list,
         description="Timeline or callback notes that help future turns surface NPC task progress consistently.",
+    )
+    core_npc_updates: list[NPCCoreStateUpdate] = Field(
+        default_factory=list,
+        description="Structured persistent updates for core NPC portrayal cards such as appearance, mood, outfit, and physical status.",
     )
     active_visible_npcs: list[str] = Field(
         default_factory=list,
@@ -147,9 +162,15 @@ class NpcState(BaseModel):
     name: str = Field(description="NPC display name.")
     description: str = Field(default="", description="Short NPC card summary.")
     identity: str = Field(default="", description="Role, job, or social identity such as caretaker, detective, or smuggler.")
+    is_core_npc: bool = Field(default=False, description="Whether this NPC should be treated as a core scenario NPC for initialization and consistency tracking.")
     age: str = Field(default="", description="Approximate age or age band when relevant to characterization.")
     gender: str = Field(default="", description="Gender identity or presentation if the scenario defines it.")
     appearance: str = Field(default="", description="Short outward appearance summary used to keep portrayals consistent.")
+    outfit: str = Field(default="", description="Current clothing or signature outfit summary used to keep portrayals consistent.")
+    demeanor: str = Field(default="", description="Stable outward manner or bearing such as stern, gentle, aloof, or twitchy.")
+    current_mood: str = Field(default="", description="Current mood or emotional baseline such as wary, calm, irritated, or grief-stricken.")
+    physical_status: str = Field(default="", description="Current physical state such as healthy, tired, injured, soaked, dusty, or bloodied.")
+    expression: str = Field(default="", description="Current visible expression or body-language note such as frowning, avoiding eye contact, or standing rigidly.")
     attitude: str = Field(default="neutral", description="High-level attitude shown to the player.")
     disposition_to_player: str = Field(default="neutral", description="Current disposition toward the player.")
     faction: str = Field(default="", description="Primary faction, family, organization, or alignment this NPC belongs to.")
@@ -186,6 +207,20 @@ class NpcState(BaseModel):
     )
     other_npc_activity: list[str] = Field(default_factory=list, description="Short notes about current alliances, conflicts, or exchanges with other NPCs.")
     tags: list[str] = Field(default_factory=list, description="Free-form NPC tags for capability, faction, or archetype.")
+
+    @field_validator("current_task", mode="before")
+    @classmethod
+    def _coerce_current_task(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                return None
+            return {
+                "summary": normalized,
+                "status": "active",
+                "progress_note": normalized,
+            }
+        return value
 
 
 class DirectorState(BaseModel):

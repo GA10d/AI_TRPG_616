@@ -1,0 +1,324 @@
+{
+  "title": "《湖岸录像谜灵》—— 单人美式恐怖冒险",
+  "brief": "灵异播客博主黄昏抵达废弃常青湖营地，调查1987火灾与失踪事件；女鬼克莱尔依附录像带与金属发带，以“噪音/背叛/被忽视”为触发点狩猎，并操纵莉莉与塔克的信任冲突。",
+  "opening_scene": "玩家收到匿名包裹（发霉录像带“常青湖1987”+拍立得），驱车到营地入口遇到寻找姐姐的莉莉；摄像机雪花屏与电流声预示克莱尔接近。",
+  "current_arc": "调查与求生",
+  "current_stage": "黄昏入营",
+  "objectives": {
+    "OBJ_FIND_TRUTH_1987": {
+      "objective_id": "OBJ_FIND_TRUTH_1987",
+      "title": "拼出1987火灾真相",
+      "summary": "通过值班表、日记与录像带还原锁门与起火经过。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_CLAIRE",
+        "ACT_LILY",
+        "ACT_TUCKER"
+      ],
+      "related_clue_ids": [
+        "CLUE_DUTY_ROSTER",
+        "CLUE_BLACK_TAPE",
+        "CLUE_SIS_DIARY",
+        "CLUE_SIS_TAPE"
+      ],
+      "related_location_ids": [
+        "LOC_STARDUST_ARCADE",
+        "LOC_ENTRANCE_PLAZA",
+        "LOC_DOCK"
+      ]
+    },
+    "OBJ_ASSEMBLE_HEADBAND": {
+      "objective_id": "OBJ_ASSEMBLE_HEADBAND",
+      "title": "集齐金属发带两半",
+      "summary": "宿舍取碎片，储物间取主体，用于召唤/安抚克莱尔。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_CLAIRE",
+        "ACT_LILY",
+        "ACT_TUCKER"
+      ],
+      "related_clue_ids": [
+        "CLUE_HEADBAND_FRAGMENT",
+        "CLUE_HEADBAND_MAIN"
+      ],
+      "related_location_ids": [
+        "LOC_CABIN_2",
+        "LOC_BURNED_STORAGE"
+      ]
+    },
+    "OBJ_GET_SIS_EVIDENCE": {
+      "objective_id": "OBJ_GET_SIS_EVIDENCE",
+      "title": "找到莉莉姐姐的日记与录像带",
+      "summary": "码头独木舟储物箱/暗格内的日记与录像带指向“录像厅的带子藏着秘密/克莱尔被锁经过”。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_LILY"
+      ],
+      "related_clue_ids": [
+        "CLUE_SIS_DIARY",
+        "CLUE_SIS_TAPE"
+      ],
+      "related_location_ids": [
+        "LOC_DOCK"
+      ]
+    },
+    "OBJ_SURVIVE_TO_DAWN": {
+      "objective_id": "OBJ_SURVIVE_TO_DAWN",
+      "title": "在实体化前活下去并保住出口",
+      "summary": "日落后光源减半，午夜克莱尔完全实体化且出口消失。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_CLAIRE"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "LOC_EVERGREEN_CAMP"
+      ]
+    },
+    "OBJ_MANAGE_TRUST": {
+      "objective_id": "OBJ_MANAGE_TRUST",
+      "title": "在莉莉与塔克之间做出可信判断",
+      "summary": "用烟蒂/值班表/照片等证据决定信任，影响斧头与日记等关键资源。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_LILY",
+        "ACT_TUCKER"
+      ],
+      "related_clue_ids": [
+        "CLUE_CIG_BUTT_DNA",
+        "CLUE_DUTY_ROSTER",
+        "CLUE_POLAROID_REFLECTION"
+      ],
+      "related_location_ids": [
+        "LOC_STARDUST_ARCADE",
+        "LOC_BURNED_STORAGE",
+        "LOC_DOCK"
+      ]
+    },
+    "OBJ_APPEASE_CLAIRE": {
+      "objective_id": "OBJ_APPEASE_CLAIRE",
+      "title": "在码头平息克莱尔怨念",
+      "summary": "集齐发带后在湖滨码头召唤残影，播放姐姐录像带并促成塔克道歉以达成救赎路线。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "ACT_CLAIRE",
+        "ACT_TUCKER",
+        "ACT_LILY"
+      ],
+      "related_clue_ids": [
+        "CLUE_HEADBAND_FRAGMENT",
+        "CLUE_HEADBAND_MAIN",
+        "CLUE_SIS_TAPE",
+        "CLUE_DUTY_ROSTER",
+        "CLUE_CIG_BUTT_DNA"
+      ],
+      "related_location_ids": [
+        "LOC_DOCK"
+      ]
+    }
+  },
+  "triggers": {
+    "TRG_FIRST_MANIFEST_CABIN2_MIRROR": {
+      "trigger_id": "TRG_FIRST_MANIFEST_CABIN2_MIRROR",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入2号木屋并触碰裂镜/照片",
+      "effect_summary": "克莱尔显灵并令玩家失聪5分钟；提示床垫下发带碎片；出现“他们锁了门”血字",
+      "priority": 90
+    },
+    "TRG_FIRST_MANIFEST_ROW13": {
+      "trigger_id": "TRG_FIRST_MANIFEST_ROW13",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "在录像厅坐上第13排中央座位",
+      "effect_summary": "克莱尔显灵并令玩家失聪5分钟",
+      "priority": 80
+    },
+    "TRG_NOISE_CHAIN": {
+      "trigger_id": "TRG_NOISE_CHAIN",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "制造大噪音（开锈门/撞金属/播放录像带未及时暂停）",
+      "effect_summary": "30秒内吸引环境噪音；克莱尔显形冷却-50%；可能触发拖拽与焦痕",
+      "priority": 85
+    },
+    "TRG_BLACK_TAPE_FORCE_REMOVE": {
+      "trigger_id": "TRG_BLACK_TAPE_FORCE_REMOVE",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "强行从放映机取出黑色录像带",
+      "effect_summary": "触发克莱尔显形",
+      "priority": 75
+    },
+    "TRG_BLACK_TAPE_FULL_PLAY": {
+      "trigger_id": "TRG_BLACK_TAPE_FULL_PLAY",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "黑色录像带连续播放满5分钟",
+      "effect_summary": "显示火灾真相；播放期间克莱尔从屏幕爬出；可用拍立得闪光打断",
+      "priority": 95
+    },
+    "TRG_TUCKER_INTRO_AXE_OR_JERSEY": {
+      "trigger_id": "TRG_TUCKER_INTRO_AXE_OR_JERSEY",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "在宿舍找到带血12号球衣/在录像厅发现刻“塔克”的消防斧",
+      "effect_summary": "塔克持斧现身威胁，后在莉莉求情下勉强合作",
+      "priority": 70
+    },
+    "TRG_SUNSET_ESCALATION": {
+      "trigger_id": "TRG_SUNSET_ESCALATION",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "19:30日落",
+      "effect_summary": "克莱尔实体化进度50%；所有光源亮度减半",
+      "priority": 60
+    },
+    "TRG_MIDNIGHT_LOCKDOWN": {
+      "trigger_id": "TRG_MIDNIGHT_LOCKDOWN",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "00:00午夜",
+      "effect_summary": "克莱尔完全实体化；迷雾笼罩；出口消失",
+      "priority": 100
+    },
+    "TRG_STAY_ALONE_10MIN_STARDUST": {
+      "trigger_id": "TRG_STAY_ALONE_10MIN_STARDUST",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "在录像厅独自停留10分钟",
+      "effect_summary": "放映机自动播放克莱尔第一视角（拍门+塔克脚步+打火机）",
+      "priority": 65
+    },
+    "TRG_CARRY_FRAGMENT_INTO_STORAGE": {
+      "trigger_id": "TRG_CARRY_FRAGMENT_INTO_STORAGE",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "携带发带碎片进入烧毁储物间",
+      "effect_summary": "碎片发烫；灰烬显现逃跑路线与被锁铁门；焦黑手指伸出",
+      "priority": 80
+    },
+    "TRG_TALK_BOTH_OVERLAP_5MIN": {
+      "trigger_id": "TRG_TALK_BOTH_OVERLAP_5MIN",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "与塔克和莉莉同时对话超过5分钟",
+      "effect_summary": "两人声音重叠成克莱尔低语；其中一人短暂鬼脸",
+      "priority": 55
+    },
+    "TRG_MISS_DOCK_BY_SUNSET": {
+      "trigger_id": "TRG_MISS_DOCK_BY_SUNSET",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "日落时仍未抵达码头",
+      "effect_summary": "木屋窗亮蓝白光；合唱声；每移动1区域焦痕+1",
+      "priority": 70
+    },
+    "TRG_POLAROID_CURSE": {
+      "trigger_id": "TRG_POLAROID_CURSE",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "拍立得拍到克莱尔残影且30秒内未销毁照片",
+      "effect_summary": "触发照片诅咒：视野持续模糊",
+      "priority": 50
+    },
+    "TRG_LILY_SACRIFICE": {
+      "trigger_id": "TRG_LILY_SACRIFICE",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家被克莱尔拖向储物间废墟",
+      "effect_summary": "莉莉扑上去吸引女鬼；70%概率被拖入湖中；临死交出拍立得（锁门瞬间照片）",
+      "priority": 90
+    },
+    "TRG_TUCKER_BETRAYAL_HEADBAND": {
+      "trigger_id": "TRG_TUCKER_BETRAYAL_HEADBAND",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家集齐发带",
+      "effect_summary": "塔克抢夺并激怒克莱尔；所有区域风险等级+1",
+      "priority": 85
+    },
+    "TRG_TUCKER_CUT_POWER_FINAL": {
+      "trigger_id": "TRG_TUCKER_CUT_POWER_FINAL",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "最终阶段选择播放黑色录像带",
+      "effect_summary": "塔克砍断放映机电源线；需在黑暗中躲避并修复电路",
+      "priority": 95
+    }
+  },
+  "secrets": {
+    "SEC_TUCKER_HEARD_KNOCKS": {
+      "secret_id": "SEC_TUCKER_HEARD_KNOCKS",
+      "title": "塔克听到拍门却选择沉默",
+      "summary": "火灾当晚他曾听到克莱尔求救，为保前途未求救；口袋藏求救信且撕掉关键段落。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_TUCKER"
+      ]
+    },
+    "SEC_ADMIN_LOCKED_CLAIRE": {
+      "secret_id": "SEC_ADMIN_LOCKED_CLAIRE",
+      "title": "管理员锁了储物间门",
+      "summary": "克莱尔发现偷钱证据后被管理员锁在储物间，最终窒息而死。",
+      "revealed": false,
+      "known_actor_ids": []
+    }
+  },
+  "world_facts": [
+    "常青湖营地1972建立，1987年火灾后废弃",
+    "核心威胁为静语女鬼克莱尔（1987火灾受害者）",
+    "克莱尔怨念分裂：附在黑色录像带与金属发带上",
+    "初次显灵会导致玩家短暂失聪，需要文字/唇语沟通",
+    "噪音会吸引克莱尔并加剧攻击，留下青色焦痕；累计3道焦痕会减速",
+    "入口电话亭循环录音警告“别放那盘带子…火要来了”",
+    "录像厅放映机内有未标注黑色录像带；完整播放可显示火灾全过程但会引发爬屏攻击",
+    "码头独木舟与储物箱藏有莉莉姐姐的日记/录像带线索",
+    "储物间石坑埋半融化录像带（克莱尔死亡载体），梁木卡着发带主体",
+    "日落后光源减半；午夜克莱尔完全实体化且出口消失"
+  ],
+  "unresolved_questions": [
+    "匿名包裹的寄件人是谁",
+    "营地公告栏火灾调查报告缺失的关键页内容是什么",
+    "莉莉姐姐的最终下落（是否死亡/被困）"
+  ],
+  "active_branch_flags": [
+    "FLAG_TRUST_BALANCE_UNSET",
+    "FLAG_DUSK_START"
+  ],
+  "foreshadow_queue": [
+    "入口电话亭反复警告不要播放某盘带子",
+    "霓虹灯牌闪烁“NO SHOW”暗示放映/缺席与被忽视主题",
+    "第13排焦黑座位与放映机黑带暗示关键显灵点",
+    "冰箱磁贴“别出声”预示噪音陷阱",
+    "独木舟船底红字“克莱尔在此”预示码头召唤/对峙"
+  ],
+  "ending_candidates": [
+    "真相救赎：集齐发带，码头播放姐姐录像带，逼塔克道歉，莉莉存活",
+    "背叛轮回：偏信塔克+电路被毁且未修复+午夜实体化，玩家被拖入废墟并成为录像受害者",
+    "寂静牺牲：莉莉为救玩家落湖，玩家播放火灾录像，塔克被拖走，克莱尔消散"
+  ],
+  "fail_state": "午夜后克莱尔完全实体化并抹除出口；若关键对抗失败则玩家被拖入储物间废墟成为“录像带里的新受害者”。"
+}

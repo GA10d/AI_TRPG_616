@@ -5,6 +5,7 @@ import nightwatchBg from "../夜航控制台.png";
 import neonBg from "../赛博霓虹.png";
 import {
   CatalogResponse,
+  DifficultyOption,
   fetchLanguagePack,
   LanguageOption,
   RuleOption,
@@ -275,17 +276,84 @@ function updateMessageContent(messages: ChatMessage[], id: string, content: stri
   return messages.map((message) => (message.id === id ? { ...message, content } : message));
 }
 
+function renderInlineMarkdown(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*([^*]+)\*\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    nodes.push(<strong key={`${match.index}-${match[2]}`}>{match[2]}</strong>);
+    lastIndex = match.index + match[1].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes.length > 0 ? nodes : [text];
+}
+
 function renderRichText(text: string): ReactNode {
-  const lines = text.replace(/\r\n/g, "\n").split("\n").filter(Boolean);
-  return (
-    <div className="rich-text">
-      {lines.map((line, index) => (
-        <p key={`${index}-${line}`} className="rich-text-paragraph">
-          {line}
-        </p>
-      ))}
-    </div>
-  );
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const blocks: ReactNode[] = [];
+  let listItems: ReactNode[] = [];
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    blocks.push(
+      <ul key={`list-${blocks.length}`} className="rich-text-list">
+        {listItems}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.trim();
+    if (!line) {
+      flushList();
+      return;
+    }
+
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      flushList();
+      const level = Math.min(headingMatch[1].length, 6);
+      const content = renderInlineMarkdown(headingMatch[2].trim());
+      const key = `heading-${index}`;
+      const className = `rich-text-heading level-${level}`;
+      if (level === 1) blocks.push(<h1 key={key} className={className}>{content}</h1>);
+      else if (level === 2) blocks.push(<h2 key={key} className={className}>{content}</h2>);
+      else if (level === 3) blocks.push(<h3 key={key} className={className}>{content}</h3>);
+      else if (level === 4) blocks.push(<h4 key={key} className={className}>{content}</h4>);
+      else if (level === 5) blocks.push(<h5 key={key} className={className}>{content}</h5>);
+      else blocks.push(<h6 key={key} className={className}>{content}</h6>);
+      return;
+    }
+
+    const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+    const orderedMatch = line.match(/^\d+\.\s+(.*)$/);
+    if (bulletMatch || orderedMatch) {
+      const content = bulletMatch?.[1] ?? orderedMatch?.[1] ?? line;
+      listItems.push(<li key={`li-${index}`}>{renderInlineMarkdown(content.trim())}</li>);
+      return;
+    }
+
+    flushList();
+    blocks.push(
+      <p key={`p-${index}`} className="rich-text-paragraph">
+        {renderInlineMarkdown(line)}
+      </p>
+    );
+  });
+
+  flushList();
+
+  return <div className="rich-text">{blocks}</div>;
 }
 
 function summarizeAgentEvent(event: StreamTurnAgentEvent): string {
@@ -317,6 +385,16 @@ function truncateStoryTitle(story: StoryOption): string {
   return source.length > 42 ? `${source.slice(0, 42)}...` : source;
 }
 
+function makeAgentMonitorPlaceholder(fallback: string): AgentMonitorState {
+  return {
+    dicer: fallback,
+    npcManager: fallback,
+    directorState: fallback,
+    director: fallback,
+    narrator: fallback,
+  };
+}
+
 export default function App() {
   const [theme, setTheme] = useState<ThemeName>("parchment");
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
@@ -326,6 +404,7 @@ export default function App() {
   const [selectedRule, setSelectedRule] = useState("");
   const [selectedStory, setSelectedStory] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState(localStorage.getItem("trpg-language") ?? "zh-CN");
+  const [selectedDifficulty, setSelectedDifficulty] = useState(localStorage.getItem("trpg-difficulty") ?? "easy");
   const [maxTurns, setMaxTurns] = useState(12);
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
@@ -340,16 +419,11 @@ export default function App() {
   const [saveEntries, setSaveEntries] = useState<SaveEntry[]>([]);
   const [selectedSaveFile, setSelectedSaveFile] = useState("");
   const [languageUi, setLanguageUi] = useState<Record<string, string> | null>(null);
-  const [agentMonitor, setAgentMonitor] = useState<AgentMonitorState>({
-    dicer: "",
-    npcManager: "",
-    directorState: "",
-    director: "",
-    narrator: "",
-  });
+  const [agentMonitor, setAgentMonitor] = useState<AgentMonitorState>(makeAgentMonitorPlaceholder("..."));
 
   const uiLanguage = normalizeUiLanguage(selectedLanguage);
   const text = { ...COPY[uiLanguage], ...(languageUi ?? {}) };
+  const difficultyText = String(languageUi?.difficulty ?? (uiLanguage === "ja" ? "難易度" : uiLanguage === "en" ? "Difficulty" : "难度"));
   const messageListRef = useRef<HTMLElement | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -366,6 +440,10 @@ export default function App() {
     () => catalog?.languages.find((language) => language.code === selectedLanguage),
     [catalog, selectedLanguage]
   );
+  const selectedDifficultyEntry = useMemo<DifficultyOption | undefined>(
+    () => catalog?.difficulties.find((difficulty) => difficulty.code === selectedDifficulty),
+    [catalog, selectedDifficulty]
+  );
   const filteredMessages = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return messages;
@@ -375,6 +453,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("trpg-language", selectedLanguage);
   }, [selectedLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem("trpg-difficulty", selectedDifficulty);
+  }, [selectedDifficulty]);
+
+  useEffect(() => {
+    setAgentMonitor((current) => {
+      const values = Object.values(current);
+      if (values.every((value) => !value || value === "..." || value === text.none)) {
+        return makeAgentMonitorPlaceholder(text.none);
+      }
+      return current;
+    });
+  }, [text.none]);
 
   useEffect(() => {
     let cancelled = false;
@@ -398,6 +490,7 @@ export default function App() {
         setCatalog(data);
         setSelectedRule((current) => current || data.rules[0]?.rule_code || "");
         setSelectedStory((current) => current || data.rules[0]?.stories[0]?.story_code || "");
+        setSelectedDifficulty((current) => current || data.difficulties[0]?.code || "easy");
       })
       .catch((error) => {
         if (cancelled) return;
@@ -410,6 +503,16 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!stories.length) {
+      setSelectedStory("");
+      return;
+    }
+    if (!stories.some((story) => story.story_code === selectedStory)) {
+      setSelectedStory(stories[0]?.story_code ?? "");
+    }
+  }, [stories, selectedStory]);
 
   useEffect(() => {
     void listSaves()
@@ -440,12 +543,12 @@ export default function App() {
 
   const handleStartSession = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedRule || !selectedStory || !selectedLanguage) return;
+    if (!selectedRule || !selectedStory || !selectedLanguage || !selectedDifficulty) return;
 
     setStartingSession(true);
     setOperationError("");
     setMessages([createMessage("system", text.createProgress)]);
-    setAgentMonitor({ dicer: "", npcManager: "", directorState: "", director: "", narrator: "" });
+    setAgentMonitor(makeAgentMonitorPlaceholder(text.none));
 
     try {
       await resetForNewSession();
@@ -455,6 +558,7 @@ export default function App() {
           story_code: selectedStory,
           player_name: playerName.trim() || text.player,
           language_code: selectedLanguage,
+          difficulty_code: selectedDifficulty,
           max_turns: maxTurns,
         },
         (streamEvent) => {
@@ -477,6 +581,7 @@ export default function App() {
             sessionIdRef.current = streamEvent.session.session_id;
             setSession(streamEvent.session);
             setSelectedLanguage(streamEvent.session.language_code);
+            setSelectedDifficulty(streamEvent.session.difficulty_code);
             setMessages((current) => [
               ...current,
               createMessage("system", `${text.sessionCreated}: ${streamEvent.session.state.scenario.title || streamEvent.session.story_code}`),
@@ -527,6 +632,7 @@ export default function App() {
         if (event.event === "turn_result") {
           setSession(event.session);
           setSelectedLanguage(event.session.language_code);
+          setSelectedDifficulty(event.session.difficulty_code);
           setMessages((current) => updateMessageContent(current, aiMessage.id, event.turn.narration));
           setAgentMonitor((current) => ({
             ...current,
@@ -556,6 +662,7 @@ export default function App() {
       sessionIdRef.current = loaded.session_id;
       setSession(loaded);
       setSelectedLanguage(loaded.language_code);
+      setSelectedDifficulty(loaded.difficulty_code);
       setMessages([createMessage("system", `${text.loadDone}: ${selectedSaveFile}`), ...transcriptToMessages(loaded.transcript)]);
     } catch (error) {
       setOperationError(error instanceof Error ? error.message : text.processing);
@@ -669,6 +776,16 @@ export default function App() {
                     </select>
                   </label>
                   <label>
+                    {difficultyText}
+                    <select value={selectedDifficulty} onChange={(event) => setSelectedDifficulty(event.target.value)} disabled={loadingCatalog || startingSession}>
+                      {catalog?.difficulties.map((difficulty) => (
+                        <option key={difficulty.code} value={difficulty.code}>
+                          {difficulty.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
                     {text.language}
                     <select value={selectedLanguage} onChange={(event) => setSelectedLanguage(event.target.value)} disabled={loadingCatalog || startingSession}>
                       {catalog?.languages.map((language) => (
@@ -682,7 +799,12 @@ export default function App() {
                     {text.turns}
                     <input type="number" min={1} max={200} value={maxTurns} onChange={(event) => setMaxTurns(Number(event.target.value) || 1)} />
                   </label>
-                  {selectedLanguageEntry ? <p className="form-note">{selectedLanguageEntry.prompt_localized ? text.localizedPrompt : text.fallbackPrompt}</p> : null}
+                  {selectedLanguageEntry ? (
+                    <p className="form-note">
+                      {selectedLanguageEntry.prompt_localized ? text.localizedPrompt : text.fallbackPrompt}
+                      {selectedDifficultyEntry ? ` ${selectedDifficultyEntry.label} prompts selected.` : ""}
+                    </p>
+                  ) : null}
                   <div className="session-form-actions">
                     <button type="submit">{startingSession ? text.creating : session ? text.restart : text.start}</button>
                   </div>

@@ -1,0 +1,270 @@
+{
+  "title": "《冷宫怨骨》—— 单人古风恐怖冒险",
+  "brief": "玩家奉密令独入废弃冷宫碎玉轩，调查十年前丽妃“巫蛊案”冤情；子时将至，厉鬼丽妃以幻象与旧物侵蚀逼近真相与抉择。",
+  "opening_scene": "子时将至，玩家持密查令牌进入碎玉轩；老太监刘忠在门口递绿芯油灯，称只能带到此处；殿内有苦杏仁味与凤纹茶具冷光。",
+  "current_arc": "调查碎玉轩",
+  "current_stage": "入宫探查",
+  "objectives": {
+    "obj_investigate_case": {
+      "objective_id": "obj_investigate_case",
+      "title": "查明十年前丽妃“巫蛊案”真相",
+      "summary": "在碎玉轩搜集罪证、日记与秘录，拼出构陷与赐死细节。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "actor_li_fei",
+        "actor_liu_zhong"
+      ],
+      "related_clue_ids": [
+        "clue_half_crime_evidence",
+        "clue_diary_scrap",
+        "clue_palace_secret_record"
+      ],
+      "related_location_ids": [
+        "loc_suiyu_xuan_front_hall",
+        "loc_suiyu_xuan_side_hall",
+        "loc_suiyu_xuan_underground"
+      ]
+    },
+    "obj_clear_grievance": {
+      "objective_id": "obj_clear_grievance",
+      "title": "昭雪结局：集齐凤钗并密奏呈证",
+      "summary": "子时前集齐凤钗两半，将《丽妃罪证》与日记残页投入密奏箱以平反。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "actor_li_fei",
+        "actor_liu_zhong"
+      ],
+      "related_clue_ids": [
+        "clue_half_crime_evidence",
+        "clue_diary_scrap",
+        "item_phoenix_hairpin"
+      ],
+      "related_location_ids": [
+        "loc_suiyu_xuan_side_hall",
+        "loc_suiyu_xuan_underground"
+      ]
+    },
+    "obj_suppress_ghost": {
+      "objective_id": "obj_suppress_ghost",
+      "title": "镇压结局：朱砂符封棺并焚秘录",
+      "summary": "制作朱砂符贴石棺，并将《宫闱秘录》焚于前殿香炉以打散魂魄。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "actor_li_fei",
+        "actor_liu_zhong"
+      ],
+      "related_clue_ids": [
+        "clue_palace_secret_record",
+        "item_cinnabar_talisman"
+      ],
+      "related_location_ids": [
+        "loc_suiyu_xuan_front_hall",
+        "loc_suiyu_xuan_courtyard",
+        "loc_suiyu_xuan_underground"
+      ]
+    },
+    "obj_get_hairpin_halves": {
+      "objective_id": "obj_get_hairpin_halves",
+      "title": "集齐凤钗两半",
+      "summary": "偏殿镜座暗格取左半；地宫香囊内取右半。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "actor_li_fei"
+      ],
+      "related_clue_ids": [
+        "item_phoenix_hairpin_left",
+        "item_phoenix_hairpin_right"
+      ],
+      "related_location_ids": [
+        "loc_suiyu_xuan_side_hall",
+        "loc_suiyu_xuan_underground"
+      ]
+    },
+    "obj_make_cinnabar_talisman": {
+      "objective_id": "obj_make_cinnabar_talisman",
+      "title": "制作朱砂符",
+      "summary": "取前殿《宫规》残页符样，用枯井黑水调朱砂绘制。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [],
+      "related_clue_ids": [
+        "item_cinnabar_talisman"
+      ],
+      "related_location_ids": [
+        "loc_suiyu_xuan_front_hall",
+        "loc_suiyu_xuan_courtyard"
+      ]
+    },
+    "obj_survive_until_resolution": {
+      "objective_id": "obj_survive_until_resolution",
+      "title": "在子时三刻前完成处置并活着离开",
+      "summary": "子时三刻怨气冲破石棺则局势崩坏。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "actor_li_fei"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_suiyu_xuan_underground"
+      ]
+    }
+  },
+  "triggers": {
+    "trg_first_scare_mirror_clean": {
+      "trigger_id": "trg_first_scare_mirror_clean",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家进入偏殿并擦拭铜镜绿锈",
+      "effect_summary": "镜中现丽妃幻象→铜镜炸裂→刘忠在门口低语“她又出来了”",
+      "priority": 90
+    },
+    "trg_old_object_possession_chance": {
+      "trigger_id": "trg_old_object_possession_chance",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "每次触碰宫廷旧物（宫装、玉带等）",
+      "effect_summary": "15%概率怨气侵入产生幻觉；可用咬破舌尖驱散（玩家描述）",
+      "priority": 70
+    },
+    "trg_midnight_manifest": {
+      "trigger_id": "trg_midnight_manifest",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "子时（午夜11点）月光条件满足",
+      "effect_summary": "丽妃可显形并更具威胁；可用龙涎香（需地宫《驱邪方》）暂时压制",
+      "priority": 95
+    },
+    "trg_time_limit_zi_shi_san_ke": {
+      "trigger_id": "trg_time_limit_zi_shi_san_ke",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "子时三刻（约40分钟）到达",
+      "effect_summary": "地宫怨气冲破石棺，丽妃化为完全厉鬼；“无人能活”式崩坏走向",
+      "priority": 100
+    },
+    "trg_corridor_linger": {
+      "trigger_id": "trg_corridor_linger",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家在走廊停留过久",
+      "effect_summary": "《宫训图》仕女眼成黑洞，指甲穿纸抓向玩家头发",
+      "priority": 60
+    },
+    "trg_courtyard_linger": {
+      "trigger_id": "trg_courtyard_linger",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家长时间停留庭院",
+      "effect_summary": "枯井石板震动渗黑血，地面现“还我命来”血字并附带灼烧感debuff",
+      "priority": 80
+    },
+    "trg_talk_liu_zhong_8min": {
+      "trigger_id": "trg_talk_liu_zhong_8min",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "与刘忠对话超过8分钟",
+      "effect_summary": "刘忠掐自己脖子以女声尖啸“那杯酒好苦…你也尝尝？”",
+      "priority": 75
+    },
+    "trg_hairpin_right_touch_pouch": {
+      "trigger_id": "trg_hairpin_right_touch_pouch",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "触碰地宫石棺旁绣“婉”香囊",
+      "effect_summary": "触发幻觉：目睹丽妃被灌毒酒场景",
+      "priority": 65
+    },
+    "trg_mix_well_water": {
+      "trigger_id": "trg_mix_well_water",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "取枯井黑水用于调朱砂",
+      "effect_summary": "听到石棺内敲击声（压迫升级）",
+      "priority": 55
+    },
+    "trg_illusion_exposed_black_hair": {
+      "trigger_id": "trg_illusion_exposed_black_hair",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家识破一次丽妃幻象",
+      "effect_summary": "现场留下“一缕黑发”线索（可用于增强道具）",
+      "priority": 50
+    }
+  },
+  "secrets": {
+    "sec_empress_framed_case": {
+      "secret_id": "sec_empress_framed_case",
+      "title": "丽妃被皇后与外戚构陷",
+      "summary": "“巫蛊咒杀太子”罪名为伪造供词所致，丽妃含冤赐死。",
+      "revealed": false,
+      "known_actor_ids": [
+        "actor_liu_zhong"
+      ]
+    },
+    "sec_liu_zhong_delivered_poison": {
+      "secret_id": "sec_liu_zhong_delivered_poison",
+      "title": "刘忠亲手递毒酒",
+      "summary": "刘忠是传旨太监，赐死时递上鹤顶红毒酒，长期负罪。",
+      "revealed": false,
+      "known_actor_ids": [
+        "actor_liu_zhong"
+      ]
+    },
+    "sec_front_hall_stain_is_blood": {
+      "secret_id": "sec_front_hall_stain_is_blood",
+      "title": "前殿污渍并非茶水",
+      "summary": "刘忠遮掩前殿暗褐污渍，实为丽妃之血迹。",
+      "revealed": false,
+      "known_actor_ids": [
+        "actor_liu_zhong"
+      ]
+    }
+  },
+  "world_facts": [
+    "主场景为皇宫废弃冷宫“碎玉轩”，分前殿、偏殿、庭院、地宫四区",
+    "厉鬼“丽妃”（本名丽氏讳婉）十年前被赐死后葬入地宫石棺而成",
+    "碎玉轩被宫墙与禁军封锁，玩家持“密查令牌”独入，无人接应",
+    "丽妃可借接触过的旧物侵入生者记忆并制造幻象",
+    "丽妃仅在子时借月光显形；子时三刻怨气将冲破石棺导致灾变",
+    "关键线索/物品：半张《丽妃罪证》、日记残页、《宫闱秘录》、凤钗两半、朱砂符、枯井黑水、绣“婉”香囊",
+    "刘忠为盟友NPC，但会因恐惧与负罪撒谎阻拦玩家接近地宫"
+  ],
+  "unresolved_questions": [
+    "《丽妃日记》残页具体内容与指向何处",
+    "地宫《驱邪方》与“龙涎香”获取与使用细节",
+    "宫墙内“密奏箱”的具体位置与投递方式"
+  ],
+  "active_branch_flags": [
+    "flag_time_pressure_active",
+    "flag_liu_zhong_unreliable_ally",
+    "flag_li_fei_haunting_active"
+  ],
+  "foreshadow_queue": [
+    "苦杏仁味暗示鹤顶红毒酒与赐死方式",
+    "庭院枯井封盖与“罪”字刻痕指向埋藏罪证/冤魂出口",
+    "偏殿铜镜映披发人影预示幻象与引诱下井/入地宫",
+    "地宫石棺刻“丽氏讳婉”预示需以姓名/身世线索对峙真相",
+    "刘忠遮掩污渍与阻拦地宫预示其参与赐死与隐瞒"
+  ],
+  "ending_candidates": [
+    "昭雪：集齐凤钗并密奏呈证，丽妃怨气消散并指引密道离开（需刘忠钥匙开暗门）",
+    "镇压：朱砂符封棺、焚《宫闱秘录》打散魂魄；代价为刘忠自缢于庭院枯井",
+    "失败：子时三刻怨气冲破石棺，丽妃完全厉鬼化导致团灭式结局"
+  ],
+  "fail_state": "子时三刻未完成昭雪或镇压，怨气冲破石棺，丽妃完全厉鬼化，生还无望。"
+}

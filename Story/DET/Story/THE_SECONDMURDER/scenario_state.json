@@ -1,0 +1,223 @@
+{
+  "title": "《大明宫谜案：景王夜殒之谜》",
+  "brief": "唐大和九年深秋，景王李涵在府中书房“密室”离奇身亡。玩家奉皇命查案，牵出“甘露”密谋与宦官集团角力。",
+  "opening_scene": "阴雨长安，玩家以京兆府大理评事身份抵达景王府。书房门从内插死，侍卫撞门入内，见景王伏尸案旁。",
+  "current_arc": "景王之死",
+  "current_stage": "现场勘查与证词对照",
+  "objectives": {
+    "OBJ_MAIN_SOLVE_MURDER": {
+      "objective_id": "OBJ_MAIN_SOLVE_MURDER",
+      "title": "查明景王死因并锁定真凶",
+      "summary": "勘验现场、核对证词与时间线，形成可上奏的证据链。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_LI_HAN",
+        "ACT_XIAO_LUZI",
+        "ACT_QIU_SHILIANG",
+        "ACT_LI_ANG",
+        "ACT_SHEN_ZHENZHU"
+      ],
+      "related_clue_ids": [
+        "CLUE_DAGGER_ROYAL",
+        "CLUE_SILK_PAPER_GANLU",
+        "CLUE_SILVER_POWDER_NAILS",
+        "CLUE_SILK_THREAD_WINDOW",
+        "CLUE_FOOTPRINT_EUNUCH_BOOTS",
+        "CLUE_ALMOND_TEA",
+        "CLUE_JADE_RING_SHI",
+        "CLUE_MUSK_PILLS",
+        "CLUE_LUZI_FINGER_CUT",
+        "CLUE_LUZI_BOOT_SILVER"
+      ],
+      "related_location_ids": [
+        "LOC_JING_WANG_STUDY",
+        "LOC_JING_WANG_GARDEN",
+        "LOC_NEISHI_SHENG",
+        "LOC_SHENCE_CAMP"
+      ]
+    },
+    "OBJ_CHECK_POISON": {
+      "objective_id": "OBJ_CHECK_POISON",
+      "title": "验明茶盏杏仁味是否为毒",
+      "summary": "请太医馆验毒（耗时3小时），确认是否存在投毒与毒物类型线索。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_XIAO_LUZI"
+      ],
+      "related_clue_ids": [
+        "CLUE_ALMOND_TEA"
+      ],
+      "related_location_ids": [
+        "LOC_JING_WANG_STUDY",
+        "LOC_TAIYI_GUAN"
+      ]
+    },
+    "OBJ_VERIFY_ALIBIS": {
+      "objective_id": "OBJ_VERIFY_ALIBIS",
+      "title": "核查亥时相关行踪与值夜记录",
+      "summary": "调阅内侍省值夜记录与相关证人，寻找时间漏洞与伪证。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_LI_ANG",
+        "ACT_QIU_SHILIANG",
+        "ACT_XIAO_LUZI"
+      ],
+      "related_clue_ids": [
+        "CLUE_NEISHI_NIGHT_LOG_GAP",
+        "CLUE_SHENCE_ALIBI_FORGED"
+      ],
+      "related_location_ids": [
+        "LOC_NEISHI_SHENG",
+        "LOC_SHENCE_CAMP",
+        "LOC_DAMING_PALACE"
+      ]
+    },
+    "OBJ_SEARCH_CONSORT_COURTYARD": {
+      "objective_id": "OBJ_SEARCH_CONSORT_COURTYARD",
+      "title": "搜查王妃内院与后园相关线索",
+      "summary": "围绕柏叶、麝香丸、被翻动土坑等，确认王妃是否夜间外出与其真实意图。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_SHEN_ZHENZHU"
+      ],
+      "related_clue_ids": [
+        "CLUE_CYPRESS_LEAF",
+        "CLUE_GARDEN_PIT_GLASS_CUP_SHEN",
+        "CLUE_MUSK_PILLS"
+      ],
+      "related_location_ids": [
+        "LOC_JING_WANG_INNER_COURT",
+        "LOC_JING_WANG_GARDEN"
+      ]
+    },
+    "OBJ_RECOVER_MISSING_LETTER": {
+      "objective_id": "OBJ_RECOVER_MISSING_LETTER",
+      "title": "追查“甘露”密信去向",
+      "summary": "确认死者所写密信是否被夺走、是否流入神策军，并寻找残片或传递痕迹。",
+      "objective_type": "side",
+      "status": "active",
+      "related_actor_ids": [
+        "ACT_XIAO_LUZI",
+        "ACT_QIU_SHILIANG"
+      ],
+      "related_clue_ids": [
+        "CLUE_SILK_PAPER_GANLU",
+        "CLUE_SHENCE_BURNED_SILK_FRAGMENT"
+      ],
+      "related_location_ids": [
+        "LOC_JING_WANG_STUDY",
+        "LOC_SHENCE_CAMP"
+      ]
+    }
+  },
+  "triggers": {
+    "TRIG_REQUEST_SHENCE_LOGS_BLOCKED": {
+      "trigger_id": "TRIG_REQUEST_SHENCE_LOGS_BLOCKED",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家试图调取神策军值夜记录",
+      "effect_summary": "侍卫提醒“仇中尉的人刚来过，无关人等不得擅动”，调查受阻并引出对抗宦官压力",
+      "priority": 70
+    },
+    "TRIG_TOX_TEST_TIME_COST": {
+      "trigger_id": "TRIG_TOX_TEST_TIME_COST",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家送检茶盏/残液至太医馆",
+      "effect_summary": "验毒耗时3小时；期间其他线索可能被转移或证人串供风险上升",
+      "priority": 50
+    },
+    "TRIG_PRESS_LUZI_WITH_SILVER": {
+      "trigger_id": "TRIG_PRESS_LUZI_WITH_SILVER",
+      "trigger_type": "clue",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "玩家以银粉/银毫笔相关证据质询小禄子",
+      "effect_summary": "小禄子证词出现破绽或改口，指向其曾触碰密信与发生冲突",
+      "priority": 60
+    }
+  },
+  "secrets": {
+    "SEC_TRUE_KILLER_LUZI": {
+      "secret_id": "SEC_TRUE_KILLER_LUZI",
+      "title": "真凶是小禄子",
+      "summary": "小禄子为仇士良安插眼线，受胁迫夺取“甘露”密信并行刺景王，伪造密室并嫁祸。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_XIAO_LUZI",
+        "ACT_QIU_SHILIANG"
+      ]
+    },
+    "SEC_GANLU_PLOT": {
+      "secret_id": "SEC_GANLU_PLOT",
+      "title": "“甘露”指向甘露之变密谋",
+      "summary": "景王与文宗相关密谋被泄露；景王死前写下“甘露”并撕裂绢纸。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_LI_HAN",
+        "ACT_LI_ANG",
+        "ACT_XIAO_LUZI",
+        "ACT_QIU_SHILIANG"
+      ]
+    },
+    "SEC_CONSORT_GARDEN_TRIP": {
+      "secret_id": "SEC_CONSORT_GARDEN_TRIP",
+      "title": "王妃夜入后园并掩埋物证",
+      "summary": "沈珍珠并非整夜未出；曾绕至后园处理麝香丸/相关器物以自保与混淆视线。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_SHEN_ZHENZHU"
+      ]
+    },
+    "SEC_WENZONG_TIME_GAP": {
+      "secret_id": "SEC_WENZONG_TIME_GAP",
+      "title": "文宗亥时存在时间空白",
+      "summary": "文宗不在场证明并非铁证，记录存在空档与可疑动向，易被政治利用。",
+      "revealed": false,
+      "known_actor_ids": [
+        "ACT_LI_ANG"
+      ]
+    }
+  },
+  "world_facts": [
+    "时间为唐大和九年（835年）深秋，长安连绵阴雨",
+    "景王李涵在王府书房死亡，门窗呈现从内锁死的密室表象",
+    "死者胸口中金柄匕首，匕首为皇室宗亲制式且原陈列于书房兵器架",
+    "死者手握半张绢纸，朱砂写“甘露”，墨迹未干且有撕裂痕",
+    "死者指甲缝有细腻银粉；小禄子靴内侧亦沾银粉且手指有新伤",
+    "后窗窗棂有断裂蚕丝；窗台下青苔有云纹靴印（常见于内侍省高阶太监）",
+    "书案茶盏倒翻，《论语》被浸湿，残留淡杏仁味",
+    "灯座上有刻“士”字玉扳指；仇士良玉佩绦带新换且沾湿泥",
+    "博古架唐三彩马尾部有裂痕，旁有麝香丸散落",
+    "内侍省记录：亥时初刻小禄子最后见死者；寅时尸体被发现"
+  ],
+  "unresolved_questions": [
+    "“甘露”绢纸原文是否还有其余部分，密信是否被夺走",
+    "杏仁味是否确为毒物残留，是否与死亡方式相关",
+    "玉扳指“士”字是否为栽赃，谁在何时接触过凶器",
+    "王妃为何携柏叶、麝香丸与后园土坑相关物证",
+    "文宗与仇士良的亥时行踪与值夜记录是否存在伪造或漏洞"
+  ],
+  "active_branch_flags": [
+    "FLAG_POLITICAL_TENSION_CHANCELLOR_VS_EUNUCHS",
+    "FLAG_GANLU_REFERENCED"
+  ],
+  "foreshadow_queue": [
+    "调取神策军记录将遭阻挠与威胁",
+    "“甘露”二字将把案件引向宫廷政变阴影",
+    "银粉与云纹靴印将把嫌疑指向内侍体系内部",
+    "玉扳指与金粉暗示有人刻意嫁祸并操控叙事"
+  ],
+  "ending_candidates": [
+    "以时间漏洞+物证链指证小禄子为真凶并上奏结案",
+    "查明小禄子受仇士良胁迫，牵出宦官集团干预与密信流向",
+    "若证据不足或触怒宦官势力，调查被迫中止/改写结论（政治性结案）"
+  ],
+  "fail_state": "触动宦官集团利益导致证据被毁、证人改口或调查权限被收回，案件被政治化定性"
+}

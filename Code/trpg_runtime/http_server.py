@@ -20,7 +20,13 @@ if str(CODE_ROOT) not in sys.path:
     sys.path.insert(0, str(CODE_ROOT))
 
 from trpg_runtime import GameState, MinimalTRPGEngine, PromptRepository, RuntimeOptions
-from trpg_runtime.language_support import build_language_options_payload, get_language_pack_payload, normalize_language_code
+from trpg_runtime.language_support import (
+    build_difficulty_options_payload,
+    build_language_options_payload,
+    get_language_pack_payload,
+    normalize_difficulty_code,
+    normalize_language_code,
+)
 
 SAVE_ROOT = REPO_ROOT / "Save"
 SESSION_SAVE_DIR = SAVE_ROOT / "session_saves"
@@ -126,6 +132,7 @@ class SessionRecord:
     story_code: str
     player_name: str
     language_code: str
+    difficulty_code: str
     max_turns: int
     opening: str
     created_at: float
@@ -361,6 +368,7 @@ def _serialize_save_payload(record: SessionRecord) -> dict[str, Any]:
             "story_code": record.story_code,
             "player_name": record.player_name,
             "language_code": record.language_code,
+            "difficulty_code": record.difficulty_code,
             "max_turns": record.max_turns,
             "opening": record.opening,
             "created_at": record.created_at,
@@ -378,6 +386,7 @@ def _serialize_session(record: SessionRecord) -> dict[str, Any]:
         "story_code": record.story_code,
         "player_name": record.player_name,
         "language_code": record.language_code,
+        "difficulty_code": record.difficulty_code,
         "max_turns": record.max_turns,
         "turns_used": record.turns_used,
         "turns_remaining": record.turns_remaining,
@@ -402,6 +411,7 @@ class TRPGServer(ThreadingHTTPServer):
         self.sessions = SessionStore()
         self.catalog = _build_catalog(self.repo)
         self.language_options = build_language_options_payload()
+        self.difficulty_options = build_difficulty_options_payload()
         self.preference_path = preference_path
         self.registry_path = registry_path
 
@@ -433,7 +443,14 @@ class TRPGHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/trpg/catalog":
-            _json_response(self, {"rules": self.app.catalog, "languages": self.app.language_options})
+            _json_response(
+                self,
+                {
+                    "rules": self.app.catalog,
+                    "languages": self.app.language_options,
+                    "difficulties": self.app.difficulty_options,
+                },
+            )
             return
 
         if len(parts := [part for part in path.split("/") if part]) == 4 and parts[:3] == ["api", "trpg", "language"]:
@@ -897,7 +914,14 @@ class TRPGHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/trpg/catalog":
-            _json_response(self, {"rules": self.app.catalog, "languages": self.app.language_options})
+            _json_response(
+                self,
+                {
+                    "rules": self.app.catalog,
+                    "languages": self.app.language_options,
+                    "difficulties": self.app.difficulty_options,
+                },
+            )
             return
 
         if path == "/api/trpg/saves":
@@ -926,6 +950,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
         story_code = _coerce_str(payload.get("story_code"), default="")
         player_name = _coerce_str(payload.get("player_name"), default="玩家")
         language_code = normalize_language_code(_coerce_str(payload.get("language_code"), default="zh-CN"))
+        difficulty_code = normalize_difficulty_code(_coerce_str(payload.get("difficulty_code"), default="easy"))
         max_turns = _coerce_int(payload.get("max_turns"), default=12, minimum=1, maximum=200)
 
         if not story_code:
@@ -942,6 +967,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
             registry_path=self.app.registry_path,
             options=options,
             language_code=language_code,
+            difficulty_code=difficulty_code,
         )
         opening = engine.generate_opening()
         try:
@@ -956,6 +982,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
             story_code=story_code,
             player_name=player_name,
             language_code=language_code,
+            difficulty_code=difficulty_code,
             max_turns=max_turns,
             opening=opening,
             created_at=time.time(),
@@ -972,6 +999,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
         story_code = _coerce_str(payload.get("story_code"), default="")
         player_name = _coerce_str(payload.get("player_name"), default="玩家")
         language_code = normalize_language_code(_coerce_str(payload.get("language_code"), default="zh-CN"))
+        difficulty_code = normalize_difficulty_code(_coerce_str(payload.get("difficulty_code"), default="easy"))
         max_turns = _coerce_int(payload.get("max_turns"), default=12, minimum=1, maximum=200)
 
         if not story_code:
@@ -991,17 +1019,19 @@ class TRPGHandler(BaseHTTPRequestHandler):
         options = RuntimeOptions(
             max_dialogue_window=_coerce_int(payload.get("max_dialogue_window"), default=5, minimum=1, maximum=20)
         )
-        engine = MinimalTRPGEngine.from_prompt_files(
-            rule_code=rule_code,
-            story_code=story_code,
-            player_name=player_name,
-            preference_path=self.app.preference_path,
-            registry_path=self.app.registry_path,
-            options=options,
-            language_code=language_code,
-        )
+        engine: MinimalTRPGEngine | None = None
 
         try:
+            engine = MinimalTRPGEngine.from_prompt_files(
+                rule_code=rule_code,
+                story_code=story_code,
+                player_name=player_name,
+                preference_path=self.app.preference_path,
+                registry_path=self.app.registry_path,
+                options=options,
+                language_code=language_code,
+                difficulty_code=difficulty_code,
+            )
             opening = engine.generate_opening(
                 event_callback=lambda event: _stream_response_write(
                     self,
@@ -1044,6 +1074,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
                 story_code=story_code,
                 player_name=player_name,
                 language_code=language_code,
+                difficulty_code=difficulty_code,
                 max_turns=max_turns,
                 opening=opening,
                 created_at=time.time(),
@@ -1054,7 +1085,8 @@ class TRPGHandler(BaseHTTPRequestHandler):
             self.app.sessions.create(record)
             _stream_response_write(self, {"event": "session_ready", "session": _serialize_session(record)})
         except Exception as exc:
-            engine.shutdown(wait=False)
+            if engine is not None:
+                engine.shutdown(wait=False)
             _stream_response_write(self, {"event": "error", "error": str(exc)})
 
     def _load_session(self) -> None:
@@ -1074,6 +1106,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
         story_code = str(session_payload.get("story_code", "")).strip()
         player_name = str(session_payload.get("player_name", "玩家")).strip() or "玩家"
         language_code = normalize_language_code(str(session_payload.get("language_code", "zh-CN")).strip() or "zh-CN")
+        difficulty_code = normalize_difficulty_code(str(session_payload.get("difficulty_code", "easy")).strip() or "easy")
         max_turns = int(session_payload.get("max_turns", 12))
         opening = str(session_payload.get("opening", "")).strip()
         options = RuntimeOptions(**dict(session_payload.get("options", {})))
@@ -1081,7 +1114,12 @@ class TRPGHandler(BaseHTTPRequestHandler):
         transcript = list(session_payload.get("transcript", []))
 
         repo = self.app.repo
-        scenario = repo.load_scenario(rule_code=rule_code, story_code=story_code, language_code=language_code)
+        scenario = repo.load_scenario(
+            rule_code=rule_code,
+            story_code=story_code,
+            language_code=language_code,
+            difficulty_code=difficulty_code,
+        )
         engine = MinimalTRPGEngine(
             scenario=scenario,
             state=state,
@@ -1090,6 +1128,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
             registry_path=self.app.registry_path,
             options=options,
             language_code=language_code,
+            difficulty_code=difficulty_code,
         )
         session_id = str(session_payload.get("session_id") or uuid.uuid4().hex[:12])
         record = SessionRecord(
@@ -1099,6 +1138,7 @@ class TRPGHandler(BaseHTTPRequestHandler):
             story_code=story_code,
             player_name=player_name,
             language_code=language_code,
+            difficulty_code=difficulty_code,
             max_turns=max_turns,
             opening=opening,
             created_at=float(session_payload.get("created_at", time.time())),

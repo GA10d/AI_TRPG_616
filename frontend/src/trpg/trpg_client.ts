@@ -20,6 +20,12 @@ export interface LanguageOption {
 export interface CatalogResponse {
   rules: RuleOption[];
   languages: LanguageOption[];
+  difficulties: DifficultyOption[];
+}
+
+export interface DifficultyOption {
+  code: string;
+  label: string;
 }
 
 export interface LanguagePackResponse {
@@ -72,6 +78,7 @@ export interface SessionResponse {
   story_code: string;
   player_name: string;
   language_code: string;
+  difficulty_code: string;
   max_turns: number;
   turns_used: number;
   turns_remaining: number;
@@ -159,6 +166,7 @@ export interface CreateSessionRequest {
   story_code: string;
   player_name: string;
   language_code: string;
+  difficulty_code: string;
   max_turns: number;
 }
 

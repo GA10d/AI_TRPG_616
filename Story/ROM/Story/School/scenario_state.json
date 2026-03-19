@@ -1,0 +1,162 @@
+{
+  "title": "心动边界：初夏未读消息",
+  "brief": "当代中国校园初夏，多男主情感跑团；玩家女主在日常触发点中选择靠近、回应或放下，最终强制导向由玩家决定对象的 Good Ending。",
+  "opening_scene": "新学期将至初夏：班级重新排座位、体育课分组、新老师到来、邻居哥哥短暂回家；这些日常事件作为情感触发点同时发生。",
+  "current_arc": "初夏开局",
+  "current_stage": "触发点并发",
+  "objectives": {
+    "obj_choose_direction": {
+      "objective_id": "obj_choose_direction",
+      "title": "确定情感行动方向",
+      "summary": "在靠近/暧昧多线/观察/回避/试探中做出并推进选择。",
+      "objective_type": "main",
+      "status": "active",
+      "related_actor_ids": [
+        "actor_top_student",
+        "actor_athlete",
+        "actor_underclassman",
+        "actor_new_teacher",
+        "actor_neighbor_brother"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": [
+        "loc_teaching_building",
+        "loc_playground",
+        "loc_evening_study_room",
+        "loc_school_gate_shop",
+        "loc_old_neighborhood_streetlight"
+      ]
+    },
+    "obj_confirm_final_choice": {
+      "objective_id": "obj_confirm_final_choice",
+      "title": "主动确认最终选择对象",
+      "summary": "在结局前明确选择一位对象并完成关系确认。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "actor_top_student",
+        "actor_athlete",
+        "actor_underclassman",
+        "actor_new_teacher",
+        "actor_neighbor_brother"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": []
+    },
+    "obj_close_others_gracefully": {
+      "objective_id": "obj_close_others_gracefully",
+      "title": "未选择角色体面收束",
+      "summary": "让未被选择的角色获得体面收束，避免强制修罗场。",
+      "objective_type": "main",
+      "status": "inactive",
+      "related_actor_ids": [
+        "actor_top_student",
+        "actor_athlete",
+        "actor_underclassman",
+        "actor_new_teacher",
+        "actor_neighbor_brother"
+      ],
+      "related_clue_ids": [],
+      "related_location_ids": []
+    }
+  },
+  "triggers": {
+    "trg_seat_shuffle": {
+      "trigger_id": "trg_seat_shuffle",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入新学期班级场景",
+      "effect_summary": "触发重新排座位带来的互动机会（学霸线优先）",
+      "priority": 70
+    },
+    "trg_pe_grouping": {
+      "trigger_id": "trg_pe_grouping",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入体育课/操场场景",
+      "effect_summary": "触发体育课分组互动（体育生线）",
+      "priority": 60
+    },
+    "trg_new_teacher_arrives": {
+      "trigger_id": "trg_new_teacher_arrives",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入课堂/办公室并遇到新老师",
+      "effect_summary": "建立师生关系与精神共鸣对照（老师线）",
+      "priority": 55
+    },
+    "trg_neighbor_returns": {
+      "trigger_id": "trg_neighbor_returns",
+      "trigger_type": "scene_entry",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入老小区/放学路相关场景且邻居哥哥在家",
+      "effect_summary": "触发邻居哥哥短暂回家带来的生活交集（邻居线）",
+      "priority": 50
+    },
+    "trg_mid_branch_points": {
+      "trigger_id": "trg_mid_branch_points",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "故事进入中段",
+      "effect_summary": "依推进的关系线陆续出现：学霸占有欲/体育生因流言受挫/学弟首次告白/邻居哥哥表达“你已经长大了”",
+      "priority": 80
+    },
+    "trg_ending_gate": {
+      "trigger_id": "trg_ending_gate",
+      "trigger_type": "time",
+      "enabled": true,
+      "consumed": false,
+      "condition_summary": "进入结局阶段",
+      "effect_summary": "检查并推动：玩家主动确认选择、被选角色逻辑完整、未选角色体面收束；强制导向 Good Ending",
+      "priority": 100
+    }
+  },
+  "secrets": {
+    "sec_underclassman_long_crush": {
+      "secret_id": "sec_underclassman_long_crush",
+      "title": "学弟长期暗恋",
+      "summary": "青梅竹马学弟一直暗恋女主，但害怕表白失去现有位置。",
+      "revealed": false,
+      "known_actor_ids": [
+        "actor_underclassman"
+      ]
+    }
+  },
+  "world_facts": [
+    "当代中国，初夏，新学期开始前后",
+    "舞台为普通中国校园与周边：教学楼、操场、晚自习教室、校门口小卖部、老小区路灯",
+    "玩家为第一人称女主，在校学生；性格与人设由过程塑造",
+    "女主与多名男性角色存在既有关系（不全从零开始）",
+    "主要情感NPC：同班学霸、隔壁班体育生、青梅竹马学弟、新来的老师、邻居家已毕业大哥哥",
+    "本剧本强制 Good Ending，且对象由玩家决定",
+    "主持人规则：不暗示正确选择、不强行修罗场、不道德越界、尊重玩家选择、始终导向情感成立的 Good Ending",
+    "情感线索分为行为/语言/环境三类；线索不直接解释含义，玩家自行判断",
+    "玩家开局可选：靠近某人/多线暧昧/保持距离观察/回避情感专注自己/主动试探"
+  ],
+  "unresolved_questions": [
+    "玩家最终会选择靠近谁、回应谁、放下谁",
+    "中段分岔点将以何种具体场景出现（占有欲、流言受挫、首次告白、“你已经长大了”）"
+  ],
+  "active_branch_flags": [
+    "flag_good_ending_forced",
+    "flag_multi_route_romance"
+  ],
+  "foreshadow_queue": [
+    "学霸用“学习/规则”掩饰在意，后续可能出现占有欲",
+    "体育生直球但自尊强，后续可能因流言与误解受伤",
+    "学弟被当作“弟弟”，后续可能尝试第一次告白",
+    "邻居哥哥意识到女主长大，后续可能提出人生阶段差异",
+    "晚自习的灯、操场的风、放学路等环境线索将承载情绪变化"
+  ],
+  "ending_candidates": [
+    "稳定校园恋爱（与某一校园对象确认关系）",
+    "年下逆转关系（与学弟确认关系）",
+    "成熟陪伴型关系（与邻居哥哥确认关系）"
+  ],
+  "fail_state": "不存在 Bad Ending（强制 Good Ending）"
+}
